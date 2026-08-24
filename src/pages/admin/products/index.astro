@@ -1,0 +1,208 @@
+---
+// src/pages/admin/products/index.astro
+import AdminLayout from '../../../layout/AdminLayout.astro';
+import { getProducts } from '../../../logic/product';
+
+// Lấy các tham số từ URL (để xử lý bộ lọc & tìm kiếm)
+const searchParams = Astro.url.searchParams;
+const search = searchParams.get('search') || '';
+const type = searchParams.get('type') || '';
+const status = searchParams.get('status') || '';
+
+// Gọi hàm lấy dữ liệu từ logic (chạy trên Server)
+const { data: products, error } = await getProducts({ search, type, status, page: 1, limit: 50 });
+---
+
+<AdminLayout>
+  <!-- Header Title & Nút Tạo Mới -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Sản phẩm</h1>
+      <p class="text-sm text-gray-500 mt-1">Quản lý kho hàng Handmade và link Affiliate.</p>
+    </div>
+    <a 
+      href="/admin/products/new" 
+      class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm inline-flex items-center"
+    >
+      <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+      Thêm sản phẩm
+    </a>
+  </div>
+
+  <!-- Khu vực Bộ lọc (Sử dụng CSS Grid để chia cột chuẩn) -->
+  <form method="GET" action="/admin/products" class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+    
+    <!-- Ô Tìm kiếm (Chiếm 5 phần) -->
+    <div class="md:col-span-12 lg:col-span-5">
+      <label for="search" class="block text-sm font-semibold text-gray-700 mb-1.5">Tìm kiếm sản phẩm</label>
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+        <input 
+          type="text" name="search" id="search" value={search} 
+          placeholder="Nhập tên sản phẩm, mã SKU..." 
+          class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 bg-gray-50 focus:bg-white transition-all h-[42px]"
+        >
+      </div>
+    </div>
+    
+    <!-- Dropdown Loại SP (Chiếm 3 phần) -->
+    <div class="md:col-span-4 lg:col-span-3">
+      <label for="type" class="block text-sm font-semibold text-gray-700 mb-1.5">Loại sản phẩm</label>
+      <select name="type" id="type" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 h-[42px] cursor-pointer shadow-sm">
+        <option value="">Tất cả loại</option>
+        <option value="handmade" selected={type === 'handmade'}>Handmade</option>
+        <option value="affiliate" selected={type === 'affiliate'}>Affiliate</option>
+      </select>
+    </div>
+
+    <!-- Dropdown Trạng thái (Chiếm 2 phần) -->
+    <div class="md:col-span-4 lg:col-span-2">
+      <label for="status" class="block text-sm font-semibold text-gray-700 mb-1.5">Trạng thái</label>
+      <select name="status" id="status" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-lg text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 h-[42px] cursor-pointer shadow-sm">
+        <option value="">Tất cả trạng thái</option>
+        <option value="published" selected={status === 'published'}>Đã xuất bản</option>
+        <option value="draft" selected={status === 'draft'}>Bản nháp</option>
+      </select>
+    </div>
+
+    <!-- Nút Lọc (Chiếm 2 phần còn lại) -->
+    <div class="md:col-span-4 lg:col-span-2">
+      <button type="submit" class="w-full h-[42px] px-4 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+        Lọc
+      </button>
+    </div>
+  </form>
+
+  <!-- Bảng Danh Sách Sản Phẩm -->
+  {error ? (
+    <div class="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 font-medium">
+      Lỗi tải dữ liệu: {error.message}
+    </div>
+  ) : (
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-100/80 border-b border-gray-200">
+            <tr>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wider w-16">Ảnh</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wider">Sản phẩm & SKU</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wider">Danh mục</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wider">Loại SP</th>
+              <th scope="col" class="px-6 py-4 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wider">Trạng thái</th>
+              <th scope="col" class="px-6 py-4 text-right text-[11px] font-bold text-gray-600 uppercase tracking-wider">Hành động</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {products && products.length > 0 ? (
+              products.map((product) => {
+                // Lấy ảnh đầu tiên trong mảng gallery (nếu có)
+                const firstImage = product.gallery && product.gallery.length > 0 ? product.gallery[0].url : 'https://placehold.co/100x100?text=No+Image';
+                
+                return (
+                  <tr class="hover:bg-gray-50 transition-colors">
+                    {/* Cột Ảnh */}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <img src={firstImage} alt={product.title} class="w-12 h-12 rounded object-cover border border-gray-200" />
+                    </td>
+                    
+                    {/* Cột Tên & SKU */}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <a href={`/admin/products/${product.id}`} class="font-medium text-blue-600 hover:text-blue-800 hover:underline truncate max-w-[250px] block">
+                        {product.title}
+                      </a>
+                      <span class="text-xs text-gray-500 mt-1">{product.sku || 'Chưa có SKU'}</span>
+                    </td>
+                    
+                    {/* Cột Danh mục */}
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                      {product.category || '---'}
+                    </td>
+                    
+                    {/* Cột Loại SP */}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                        product.product_type === 'handmade' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-purple-50 text-purple-700 border-purple-200'
+                      }`}>
+                        {product.product_type === 'handmade' ? 'Handmade' : 'Affiliate'}
+                      </span>
+                    </td>
+                    
+                    {/* Cột Trạng thái */}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                        product.status === 'published' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-600 border-gray-200'
+                      }`}>
+                        {product.status === 'published' ? 'Published' : 'Draft'}
+                      </span>
+                    </td>
+                    
+                    {/* Cột Hành động */}
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                      <a href={`/admin/products/${product.id}`} class="text-blue-600 hover:text-blue-900 transition-colors">Sửa</a>
+                      <button 
+                        type="button"
+                        class="text-red-600 hover:text-red-900 transition-colors delete-btn"
+                        data-id={product.id}
+                        data-title={product.title}
+                      >
+                        Xóa
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })
+            ) : (
+              <tr>
+                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                  <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                  <p class="text-base font-medium text-gray-900">Không tìm thấy sản phẩm nào</p>
+                  <p class="text-sm mt-1">Hãy nhấn "Thêm sản phẩm" hoặc thay đổi bộ lọc.</p>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+</AdminLayout>
+
+<script>
+  import { deleteProduct } from '../../../logic/product';
+
+  const deleteButtons = document.querySelectorAll('.delete-btn');
+
+  deleteButtons.forEach(button => {
+    button.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const id = btn.dataset.id;
+      const title = btn.dataset.title;
+
+      if (!id) return;
+
+      const isConfirm = window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm:\n"${title}"\n\nHành động này không thể hoàn tác!`);
+      
+      if (isConfirm) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="animate-pulse">Đang xóa...</span>';
+
+        try {
+          const { error } = await deleteProduct(id);
+          if (error) throw error;
+          
+          const row = btn.closest('tr');
+          if (row) row.remove();
+          
+        } catch (err: any) {
+          console.error("Lỗi khi xóa:", err);
+          alert("Không thể xóa sản phẩm: " + err.message);
+          btn.disabled = false;
+          btn.innerHTML = 'Xóa';
+        }
+      }
+    });
+  });
+</script>

@@ -1,0 +1,75 @@
+---
+// src/layout/AdminLayout.astro
+import '../styles/global.css';
+// Lấy pathname hiện tại để xử lý Active state
+const currentPath = Astro.url.pathname;
+
+// Cấu hình 3 mục menu theo tài liệu
+const menuItems = [
+  { name: 'Bài viết & SEO', path: '/admin/posts' },
+  { name: 'Link Affiliate', path: '/admin/affiliates' },
+  { name: 'Tracking', path: '/admin/tracking' },
+  { name: 'Sản phẩm', path: '/admin/products' },
+];
+---
+
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CMS Admin</title>
+  </head>
+  <body class="bg-gray-50 text-gray-900 font-sans">
+    <!-- Bố cục Flex full màn hình -->
+    <div class="flex h-screen overflow-hidden">
+      
+      <!-- Sidebar (~240px = w-60) -->
+      <aside class="w-60 bg-white border-r border-gray-200 flex flex-col justify-between shrink-0">
+        <div>
+          <!-- Logo / Header Sidebar -->
+          <div class="h-16 flex items-center px-6 border-b border-gray-200">
+            <h1 class="text-lg font-bold text-blue-600">Minoxus CMS</h1>
+          </div>
+          
+          <!-- Navigation -->
+          <nav class="p-4 space-y-1">
+            {menuItems.map(item => {
+              // Kiểm tra xem pathname hiện tại có bắt đầu bằng path của item hay không
+              const isActive = currentPath.startsWith(item.path);
+              
+              return (
+                <a 
+                  href={item.path}
+                  class={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive 
+                      ? 'bg-blue-50 text-blue-700' 
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+                >
+                  {item.name}
+                </a>
+              );
+            })}
+          </nav>
+        </div>
+        
+        <!-- Nút Logout ở cuối Sidebar -->
+        <div class="p-4 border-t border-gray-200">
+          <a 
+            href="/api/logout" 
+            class="block w-full text-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+          >
+            Đăng xuất
+          </a>
+        </div>
+      </aside>
+
+      <!-- Main Content (chiếm phần còn lại) -->
+      <main class="flex-1 overflow-auto bg-gray-50 p-8">
+        <!-- Nội dung của trang con sẽ được render vào đây -->
+        <slot />
+      </main>
+      
+    </div>
+  </body>
+</html>

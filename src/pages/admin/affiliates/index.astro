@@ -1,0 +1,405 @@
+---
+// src/pages/admin/affiliates/index.astro
+import AdminLayout from '../../../layout/AdminLayout.astro';
+import { getAffiliates } from '../../../logic/affiliate';
+
+// 1. Lấy dữ liệu từ Supabase
+const { data: links, error } = await getAffiliates();
+
+// 2. Hàm tính toán trạng thái
+function getExactStatus(expiredAtStr: string | null) {
+  if (!expiredAtStr) return 'active';
+
+  const now = new Date();
+  now.setHours(0, 0, 0, 0); 
+
+  const exp = new Date(expiredAtStr);
+  exp.setHours(0, 0, 0, 0); 
+
+  const diffTime = exp.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) return 'expired';   
+  if (diffDays === 1) return 'expiring'; 
+  return 'active';                       
+}
+---
+
+<AdminLayout>
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Quản lý Link Affiliate</h1>
+      <p class="text-sm text-gray-500 mt-1">Quản lý vòng đời và hiệu suất của các liên kết tiếp thị.</p>
+    </div>
+    
+    <button 
+      type="button" 
+      id="open-add-modal-btn"
+      class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm inline-flex items-center"
+    >
+      <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+      Thêm Link mới
+    </button>
+  </div>
+
+  {error ? (
+    <div class="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 font-medium">
+      Lỗi tải dữ liệu: {error.message}
+    </div>
+  ) : (
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      
+      <div class="border-b border-gray-200 bg-gray-50/50 px-4 py-3">
+        <ul class="flex space-x-2 text-sm font-medium">
+          <li>
+            <button data-filter="all" class="filter-tab px-3 py-1.5 rounded-md bg-blue-50 text-blue-700 font-semibold transition-colors">
+              Tất cả
+            </button>
+          </li>
+          <li>
+            <button data-filter="active" class="filter-tab px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+              🟢 Hoạt động
+            </button>
+          </li>
+          <li>
+            <button data-filter="expiring" class="filter-tab px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+              🟡 Sắp hết hạn
+            </button>
+          </li>
+          <li>
+            <button data-filter="expired" class="filter-tab px-3 py-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+              🔴 Hết hạn
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <div class="overflow-x-auto min-h-[400px]">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">STT</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tên chiến dịch</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nền tảng</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ngày hết hạn</th>
+              <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Lượt click</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Trạng thái</th>
+              <th scope="col" class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Hành động</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200" id="affiliate-table-body">
+            {links && links.length > 0 ? (
+              links.map((link, index) => {
+                const status = getExactStatus(link.expired_at);
+                // Xử lý định dạng YYYY-MM-DD an toàn để nhét vào form edit
+                const dateYMD = link.expired_at ? new Date(link.expired_at).toISOString().split('T')[0] : '';
+                
+                return (
+                  <tr class="link-row hover:bg-gray-50 transition-colors" data-status={status}>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
+                      {index + 1}
+                    </td>
+                    
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="font-medium text-gray-900 truncate max-w-[200px]" title={link.name}>
+                        {link.name}
+                      </div>
+                      <a href={link.url} target="_blank" class="text-xs text-blue-500 hover:underline truncate max-w-[200px] block mt-0.5" title={link.url}>
+                        {link.url}
+                      </a>
+                    </td>
+                    
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200 uppercase tracking-wider">
+                        {link.platform}
+                      </span>
+                    </td>
+                    
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                      {link.expired_at ? new Date(link.expired_at).toLocaleDateString('vi-VN', {
+                        day: '2-digit', month: '2-digit', year: 'numeric'
+                      }) : '--'}
+                    </td>
+                    
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-center font-bold">
+                      {link.clicks || 0}
+                    </td>
+                    
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      {status === 'active' && (
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
+                          🟢 Hoạt động
+                        </span>
+                      )}
+                      {status === 'expiring' && (
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 animate-pulse">
+                          🟡 Sắp hết hạn
+                        </span>
+                      )}
+                      {status === 'expired' && (
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
+                          🔴 Hết hạn
+                        </span>
+                      )}
+                    </td>
+                    
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                      <button 
+                        type="button" 
+                        class="text-blue-600 hover:text-blue-900 transition-colors edit-btn" 
+                        data-id={link.id}
+                        data-name={link.name}
+                        data-platform={link.platform}
+                        data-url={link.url}
+                        data-expired={dateYMD}
+                      >Sửa</button>
+                      <button 
+                        type="button" 
+                        class="text-red-600 hover:text-red-900 transition-colors delete-btn" 
+                        data-id={link.id}
+                        data-name={link.name}
+                      >Xóa</button>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr id="empty-state">
+                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                  <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                  <p class="text-base font-medium text-gray-900">Chưa có liên kết Affiliate nào</p>
+                  <p class="text-sm mt-1">Hãy nhấn "Thêm Link mới" để bắt đầu chiến dịch.</p>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+
+  <div id="affiliate-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-opacity">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-95 opacity-0" id="modal-content">
+      
+      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+        <h3 id="modal-title" class="text-lg font-bold text-gray-900">Thêm Link Affiliate</h3>
+        <button type="button" id="close-modal-btn" class="text-gray-400 hover:text-gray-600 focus:outline-none">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <form id="affiliate-form" class="p-6 space-y-4">
+        <input type="hidden" id="link-id" name="id" value="" />
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tên chiến dịch/Sản phẩm <span class="text-red-500">*</span></label>
+          <input type="text" id="link-name" name="name" required placeholder="VD: Máy chiếu Beonmax A1..." class="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nền tảng <span class="text-red-500">*</span></label>
+          <input type="text" id="link-platform" name="platform" required placeholder="VD: Shopee, Lazada, Amazon..." class="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Đường dẫn URL <span class="text-red-500">*</span></label>
+          <input type="url" id="link-url" name="url" required placeholder="https://shopee.vn/..." class="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm outline-none text-blue-600" />
+          <p class="text-[11px] text-gray-500 mt-1">Phải bắt đầu bằng http:// hoặc https://</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Ngày hết hạn <span class="text-red-500">*</span></label>
+          <input type="date" id="link-expired" name="expired_at" required class="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm outline-none" />
+        </div>
+
+        <div class="pt-4 flex justify-end space-x-3 border-t border-gray-100 mt-6">
+          <button type="button" id="cancel-modal-btn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none">
+            Hủy
+          </button>
+          <button type="submit" id="save-link-btn" class="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none shadow-sm flex items-center">
+            <span id="save-btn-text">Lưu Link</span>
+            <svg id="save-btn-spinner" class="animate-spin ml-2 h-4 w-4 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { createAffiliate, updateAffiliate, deleteAffiliate } from '../../../logic/affiliate';
+
+  // 1. LOGIC BỘ LỌC CLIENT-SIDE (Từ Bước 9.1)
+  const tabs = document.querySelectorAll('.filter-tab') as NodeListOf<HTMLButtonElement>;
+  const rows = document.querySelectorAll('.link-row') as NodeListOf<HTMLTableRowElement>;
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => {
+        t.classList.remove('bg-blue-50', 'text-blue-700', 'font-semibold');
+        t.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+      });
+      tab.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+      tab.classList.add('bg-blue-50', 'text-blue-700', 'font-semibold');
+
+      const filterValue = tab.dataset.filter;
+      rows.forEach(row => {
+        if (filterValue === 'all' || row.dataset.status === filterValue) {
+          row.style.display = ''; 
+        } else {
+          row.style.display = 'none'; 
+        }
+      });
+    });
+  });
+
+  // 2. LOGIC ĐIỀU KHIỂN MODAL & CRUD
+  const modal = document.getElementById('affiliate-modal') as HTMLDivElement;
+  const modalContent = document.getElementById('modal-content') as HTMLDivElement;
+  const form = document.getElementById('affiliate-form') as HTMLFormElement;
+  
+  // Nút bấm
+  const openAddBtn = document.getElementById('open-add-modal-btn') as HTMLButtonElement;
+  const closeBtn = document.getElementById('close-modal-btn') as HTMLButtonElement;
+  const cancelBtn = document.getElementById('cancel-modal-btn') as HTMLButtonElement;
+  const saveBtn = document.getElementById('save-link-btn') as HTMLButtonElement;
+  const saveBtnText = document.getElementById('save-btn-text') as HTMLSpanElement;
+  const saveBtnSpinner = document.getElementById('save-btn-spinner') as HTMLElement;
+  
+  // Fields Form
+  const modalTitle = document.getElementById('modal-title') as HTMLHeadingElement;
+  const idInput = document.getElementById('link-id') as HTMLInputElement;
+  const nameInput = document.getElementById('link-name') as HTMLInputElement;
+  const platformInput = document.getElementById('link-platform') as HTMLInputElement;
+  const urlInput = document.getElementById('link-url') as HTMLInputElement;
+  const expiredInput = document.getElementById('link-expired') as HTMLInputElement;
+
+  // Hiệu ứng mở/đóng Modal
+  function openModal() {
+    modal.classList.remove('hidden');
+    // Request animation frame để hiệu ứng scale CSS chạy mượt
+    requestAnimationFrame(() => {
+      modalContent.classList.remove('scale-95', 'opacity-0');
+      modalContent.classList.add('scale-100', 'opacity-100');
+    });
+  }
+
+  function closeModal() {
+    modalContent.classList.remove('scale-100', 'opacity-100');
+    modalContent.classList.add('scale-95', 'opacity-0');
+    setTimeout(() => {
+      modal.classList.add('hidden');
+      form.reset();
+      idInput.value = ''; // Reset ID về trạng thái Thêm mới
+    }, 200); // Khớp thời gian CSS transition
+  }
+
+  // Bấm nút "Thêm Link mới"
+  openAddBtn?.addEventListener('click', () => {
+    modalTitle.textContent = 'Thêm Link Affiliate';
+    form.reset();
+    idInput.value = '';
+    openModal();
+  });
+
+  // Bấm nút "Hủy" hoặc "X"
+  closeBtn?.addEventListener('click', closeModal);
+  cancelBtn?.addEventListener('click', closeModal);
+
+  // Đóng modal khi click ra ngoài vùng xám
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // Bấm nút "Sửa" trên từng dòng
+  const editButtons = document.querySelectorAll('.edit-btn') as NodeListOf<HTMLButtonElement>;
+  editButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modalTitle.textContent = 'Chỉnh sửa Link Affiliate';
+      idInput.value = btn.dataset.id || '';
+      nameInput.value = btn.dataset.name || '';
+      platformInput.value = btn.dataset.platform || '';
+      urlInput.value = btn.dataset.url || '';
+      expiredInput.value = btn.dataset.expired || '';
+      openModal();
+    });
+  });
+
+  // Xử lý Submit Form (Create / Update)
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // Custom Validation URL an toàn
+    try {
+      new URL(urlInput.value);
+    } catch (_) {
+      alert("Đường dẫn URL không hợp lệ! Vui lòng nhập chuẩn định dạng (VD: https://shopee.vn/...)");
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtnText.textContent = 'Đang lưu...';
+    saveBtnSpinner.classList.remove('hidden');
+
+    const linkData = {
+      name: nameInput.value.trim(),
+      platform: platformInput.value.trim(),
+      url: urlInput.value.trim(),
+      expired_at: expiredInput.value,
+    };
+
+    try {
+      if (idInput.value) {
+        // CÓ ID -> UPDATE
+        const { error } = await updateAffiliate(idInput.value, linkData);
+        if (error) throw error;
+      } else {
+        // KHÔNG CÓ ID -> CREATE
+        const { error } = await createAffiliate(linkData);
+        if (error) throw error;
+      }
+      
+      // Reload lại trang để Astro vẽ lại bảng mới nhất từ DB
+      window.location.reload();
+
+    } catch (error: any) {
+      console.error("Lỗi khi lưu Affiliate Link:", error);
+      alert("Có lỗi xảy ra: " + error.message);
+      saveBtn.disabled = false;
+      saveBtnText.textContent = 'Lưu Link';
+      saveBtnSpinner.classList.add('hidden');
+    }
+  });
+
+  // Xử lý nút "Xóa"
+  const deleteButtons = document.querySelectorAll('.delete-btn') as NodeListOf<HTMLButtonElement>;
+  deleteButtons.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const name = btn.dataset.name;
+
+      if (!id) return;
+      if (!confirm(`Bạn có chắc chắn muốn xóa link "${name}" không?\nHành động này sẽ xóa link vĩnh viễn khỏi Database!`)) return;
+
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Đang xóa...';
+
+      try {
+        const { error } = await deleteAffiliate(id);
+        if (error) throw error;
+        
+        // Cập nhật giao diện: Xóa dòng đó đi cho mượt, khỏi cần reload lại trang
+        const row = btn.closest('tr');
+        if (row) row.remove();
+        
+      } catch (error: any) {
+        console.error("Lỗi khi xóa Link:", error);
+        alert("Không thể xóa link: " + error.message);
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    });
+  });
+</script>

@@ -1,11 +1,207 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+// src/pages/index.astro
+import MainLayout from '../layout/MainLayout.astro';
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<MainLayout title="MINOXUS | Home">
+  <!-- NAVBAR -->
+  
+
+  <main class="max-w-[1100px] mx-auto px-6">
+    
+    <!-- HERO GRID -->
+    <section class="py-12 md:py-16">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 auto-rows-[220px]">
+        
+        <!-- Ô 1 (Tall card) -->
+        <div class="bg-[#2C6B9E] hover:bg-[#1F5682] transition-all duration-500 text-white p-8 relative cursor-pointer flex flex-col justify-center items-center lg:row-span-2 lg:col-span-1 group shadow-sm hover:shadow-md" data-modal="modal-social">
+          <span class="absolute top-6 right-6 text-xl font-light border border-white/40 rounded-full w-7 h-7 flex items-center justify-center pb-0.5 group-hover:bg-white group-hover:text-[#2C6B9E] transition-colors duration-300">+</span>
+          <h3 class="font-light text-[18px] uppercase tracking-[0.2em] text-center mt-12">SOCIAL<br/>MEDIA</h3>
+          <span class="absolute bottom-8 left-8 text-2xl font-light border border-white rounded-full w-10 h-10 flex items-center justify-center transform group-hover:translate-x-2 transition-transform duration-500">→</span>
+        </div>
+        
+        <!-- Các Ô còn lại -->
+        {
+          [
+            { id: 'modal-3d', title: 'MÔ HÌNH 3D TỪ<br/>BÌA CÁT TÔNG', bold: false },
+            { id: 'modal-business', title: 'KINH DOANH', bold: true },
+            { id: 'modal-design', title: 'THIẾT KẾ', bold: true },
+            { id: 'modal-editor', title: 'EDITOR', bold: true },
+            { id: 'modal-content', title: 'CONTENT<br/>WRITER', bold: false },
+            { id: 'modal-template', title: 'TEMPLATE<br/>WEBSITE', bold: false }
+          ].map((item) => (
+            <div class="bg-[#2C6B9E] hover:bg-[#1F5682] transition-all duration-500 text-white p-8 relative cursor-pointer flex items-center justify-center text-center group shadow-sm hover:shadow-md" data-modal={item.id}>
+              <span class="absolute top-5 right-5 text-lg font-light border border-white/40 rounded-full w-6 h-6 flex items-center justify-center pb-0.5 group-hover:bg-white group-hover:text-[#2C6B9E] transition-colors duration-300">+</span>
+              <h3 class={`${item.bold ? 'font-bold text-[20px]' : 'font-light text-[18px] leading-[1.6]'} uppercase tracking-[0.15em]`} set:html={item.title}></h3>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- SECTION GIỚI THIỆU -->
+    <section class="py-16 md:py-24 flex flex-col gap-24 md:gap-32">
+      
+      <!-- Block 1 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 items-center">
+        <div class="aspect-[3/4] bg-[#f8f9fa] flex items-center justify-center text-gray-400 tracking-widest font-light text-sm shadow-sm">ẢNH PLACEHOLDER</div>
+        <div class="flex flex-col text-center md:text-right">
+          <h2 class="font-bold text-[40px] md:text-[54px] text-[#2C6B9E] uppercase tracking-wide leading-[1.1] mb-2">MÔ HÌNH 3D<br/>TỪ BÌA CÁT TÔNG</h2>
+          <p class="font-light text-[13px] text-[#2C6B9E] opacity-80 mb-10 tracking-[0.3em] uppercase">MÀNG CHÍNH</p>
+          <p class="text-[16px] text-[#333333] font-light uppercase leading-[2] tracking-[0.1em]">
+            Niềm đam mê lớn từ các mô hình được làm từ bìa cát tông. Tôi có thể biến những mảnh bìa thành mô hình và đồ trang trí sang trọng. Hãy cho tôi ý tưởng ban đầu và tôi sẽ biến nó thành sản phẩm hoàn thiện.
+          </p>
+        </div>
+      </div>
+      
+      <!-- Block 2 (Reverse) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 items-center">
+        <div class="flex flex-col text-center md:text-left order-2 md:order-1">
+          <h2 class="font-bold text-[40px] md:text-[54px] text-[#2C6B9E] uppercase tracking-wide leading-[1.1] mb-2">EDITOR</h2>
+          <p class="font-light text-[13px] text-[#2C6B9E] opacity-80 mb-10 tracking-[0.3em] uppercase">MÀNG PHỤ</p>
+          <p class="text-[16px] text-[#333333] font-light uppercase leading-[2] tracking-[0.1em]">
+            Với khả năng sáng tạo và cập nhật xu hướng nhanh chóng. Những video thô sơ ban đầu của bạn sẽ là 1 trong những nguyên liệu góp phần tạo nên món ăn tinh thần của người xem.
+          </p>
+        </div>
+        <div class="aspect-[3/4] bg-[#f8f9fa] flex items-center justify-center text-gray-400 tracking-widest font-light text-sm shadow-sm order-1 md:order-2">ẢNH PLACEHOLDER</div>
+      </div>
+
+      <!-- Block 3 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 items-center">
+        <div class="aspect-[3/4] bg-[#f8f9fa] flex items-center justify-center text-gray-400 tracking-widest font-light text-sm shadow-sm">ẢNH PLACEHOLDER</div>
+        <div class="flex flex-col text-center md:text-right">
+          <h2 class="font-bold text-[40px] md:text-[54px] text-[#2C6B9E] uppercase tracking-wide leading-[1.1] mb-2">CONTENT WRITER</h2>
+          <p class="font-light text-[13px] text-[#2C6B9E] opacity-80 mb-10 tracking-[0.3em] uppercase">HỖ TRỢ</p>
+          <p class="text-[16px] text-[#333333] font-light uppercase leading-[2] tracking-[0.1em]">
+            Viết lách là 1 kỹ năng khá quan trọng với bất kỳ ai. Đương nhiên nếu muốn xây dựng thương hiệu ta cần phải học nó.
+          </p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- CONTACT FORM -->
+    <section class="pt-20 pb-28 border-t border-gray-100">
+      <div class="max-w-[700px] mx-auto">
+        <h2 class="font-bold text-4xl md:text-[44px] text-center text-[#2C6B9E] mb-14 tracking-[0.15em] uppercase">CONTACT</h2>
+        
+        <form class="flex flex-col gap-10">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="flex flex-col">
+              <label class="text-[13px] font-medium text-[#2C6B9E] mb-2 uppercase tracking-[0.2em]">FULL NAME</label>
+              <input type="text" class="text-[16px] font-light py-3 bg-transparent border-b border-[#2C6B9E]/40 text-[#0D0D0D] outline-none focus:border-[#2C6B9E] transition-colors placeholder-gray-400" placeholder="Họ và tên..." />
+            </div>
+            <div class="flex flex-col">
+              <label class="text-[13px] font-medium text-[#2C6B9E] mb-2 uppercase tracking-[0.2em]">EMAIL</label>
+              <input type="email" class="text-[16px] font-light py-3 bg-transparent border-b border-[#2C6B9E]/40 text-[#0D0D0D] outline-none focus:border-[#2C6B9E] transition-colors placeholder-gray-400" placeholder="Email của bạn..." />
+            </div>
+          </div>
+          
+          <div class="flex flex-col">
+            <label class="text-[13px] font-medium text-[#2C6B9E] mb-2 uppercase tracking-[0.2em]">CONTENT</label>
+            <textarea class="text-[16px] font-light py-3 bg-transparent border-b border-[#2C6B9E]/40 text-[#0D0D0D] outline-none focus:border-[#2C6B9E] transition-colors h-24 resize-none placeholder-gray-400" placeholder="Nội dung muốn liên hệ..."></textarea>
+          </div>
+          
+          <div class="flex justify-center mt-6">
+            <button type="button" class="bg-[#2C6B9E] hover:bg-[#0D0D0D] text-white font-medium text-[15px] uppercase px-20 py-4 tracking-[0.2em] transition-colors duration-500 shadow-sm hover:shadow-md">SEND MESSAGE</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+
+
+  <!-- MODALS -->
+  {
+    [
+      { id: 'modal-social', title: 'SOCIAL MEDIA' },
+      { id: 'modal-3d', title: 'MÔ HÌNH 3D TỪ BÌA CÁT TÔNG' },
+      { id: 'modal-business', title: 'KINH DOANH' },
+      { id: 'modal-design', title: 'THIẾT KẾ' },
+      { id: 'modal-editor', title: 'EDITOR' },
+      { id: 'modal-content', title: 'CONTENT WRITER' },
+      { id: 'modal-template', title: 'TEMPLATE WEBSITE' }
+    ].map((modal) => (
+      <div id={modal.id} class="modal-overlay fixed inset-0 bg-white/95 backdrop-blur-md z-[1000] flex items-center justify-center opacity-0 invisible transition-all duration-500">
+        <!-- Thêm aria-label cho nút Đóng -->
+        <button aria-label="Đóng" class="modal-close absolute top-8 right-10 text-[#0D0D0D] hover:text-[#2C6B9E] text-4xl font-light transition-colors transform hover:rotate-90 duration-300">✕</button>
+        <div class="text-center p-8 max-w-[800px] transform transition-transform duration-700 translate-y-8">
+          <h2 class="font-bold text-5xl md:text-[64px] text-[#2C6B9E] tracking-wide mb-6 uppercase leading-tight">{modal.title}</h2>
+          <p class="text-[15px] text-gray-600 tracking-[0.3em] font-light uppercase">Nội dung sẽ cập nhật sau</p>
+        </div>
+      </div>
+    ))
+  }
+</MainLayout>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Menu
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    if (hamburgerBtn && mobileMenu) {
+      hamburgerBtn.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+        mobileMenu.classList.toggle('flex');
+      });
+    }
+
+    // Modal
+    const gridCards = document.querySelectorAll('[data-modal]');
+    gridCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const modalId = (card as HTMLElement).dataset.modal;
+        if (!modalId) return;
+        const overlay = document.getElementById(modalId);
+        if (overlay) {
+          overlay.classList.remove('opacity-0', 'invisible');
+          const content = overlay.querySelector('.max-w-\\[800px\\]');
+          if (content) {
+            content.classList.remove('translate-y-8');
+            content.classList.add('translate-y-0');
+          }
+          document.body.style.overflow = 'hidden';
+        }
+      });
+    });
+
+    const closeTriggers = document.querySelectorAll('.modal-close, .modal-overlay');
+    closeTriggers.forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target === el) {
+          const overlay = el.closest('.modal-overlay');
+          if (overlay) {
+            const content = overlay.querySelector('.max-w-\\[800px\\]');
+            if (content) {
+              content.classList.remove('translate-y-0');
+              content.classList.add('translate-y-8');
+            }
+            setTimeout(() => {
+              overlay.classList.add('opacity-0', 'invisible');
+              document.body.style.overflow = '';
+            }, 200);
+          }
+        }
+      });
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const openModals = document.querySelectorAll('.modal-overlay:not(.opacity-0)');
+        openModals.forEach(overlay => {
+          const content = overlay.querySelector('.max-w-\\[800px\\]');
+          if (content) {
+            content.classList.remove('translate-y-0');
+            content.classList.add('translate-y-8');
+          }
+          setTimeout(() => {
+            overlay.classList.add('opacity-0', 'invisible');
+            document.body.style.overflow = '';
+          }, 200);
+        });
+      }
+    });
+  });
+</script>

@@ -1,0 +1,55 @@
+---
+import MainLayout from '../layout/MainLayout.astro';
+import CategoryTabs from '../components/CategoryTabs.astro';
+import PostCard from '../components/PostCard.astro';
+import { getPostsByType } from '../logic/post.ts';
+import { getPageWindow } from '../utils/pagination.ts';
+import { POST_TYPE_LABELS } from '../utils/postTaxonomy.ts';
+
+const TYPE = 'money';
+const LIMIT = 9;
+
+const pageParam = Number(Astro.url.searchParams.get('page')) || 1;
+const { posts, totalCount } = await getPostsByType(TYPE, { page: pageParam, limit: LIMIT });
+const totalPages = Math.max(1, Math.ceil(totalCount / LIMIT));
+const currentPage = Math.min(pageParam, totalPages);
+const pageWindow = getPageWindow(currentPage, totalPages);
+---
+<MainLayout title={`${POST_TYPE_LABELS[TYPE]} — Inoxus.space`}>
+  <CategoryTabs activeType={TYPE} />
+
+  <div class="text-center pt-6 pb-2 px-4">
+    <h1 class="font-oswald uppercase text-[clamp(26px,4vw,38px)]">{POST_TYPE_LABELS[TYPE]}</h1>
+    <p class="text-brand-mute text-sm mt-2 max-w-[560px] mx-auto">
+      Những đánh giá chi tiết, bộ công cụ chọn lọc và gợi ý trang thiết bị đáng đầu tư nhất.
+    </p>
+  </div>
+
+  <div class="max-w-[1100px] mx-auto px-6">
+    {posts.length === 0 ? (
+      <p class="text-center text-brand-mute py-20">Chưa có bài viết nào trong danh mục này.</p>
+    ) : (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7 py-10">
+        {posts.map((p) => <PostCard post={p} />)}
+      </div>
+    )}
+  </div>
+
+  {totalPages > 1 && (
+    <div class="flex justify-center gap-2 pb-16 font-oswald text-sm">
+      {pageWindow.map((p) =>
+        p === '...' ? (
+          <span class="w-9 h-9 flex items-center justify-center text-brand-mute">…</span>
+        ) : (
+          <a
+            href={`/picks?page=${p}`}
+            class={`w-9 h-9 rounded-full border flex items-center justify-center
+              ${p === currentPage ? 'bg-brand-blue border-brand-blue text-white' : 'border-gray-200'}`}
+          >
+            {p}
+          </a>
+        )
+      )}
+    </div>
+  )}
+</MainLayout>

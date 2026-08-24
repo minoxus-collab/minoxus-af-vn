@@ -1,0 +1,150 @@
+---
+// src/layout/MainLayout.astro
+
+// Nhúng file CSS toàn cục chứa Tailwind và Font bằng lệnh import
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  noindex?: boolean;
+}
+
+const { title, description = '', noindex = false } = Astro.props;
+const currentPath = Astro.url.pathname;
+const isHome = currentPath === '/';
+const isProduct = currentPath.startsWith('/products');
+const isPost = currentPath.startsWith('/posts') || 
+               currentPath.startsWith('/guides') || 
+               currentPath.startsWith('/insights') || 
+               currentPath.startsWith('/picks');
+---
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title}</title>
+  
+  {description && <meta name="description" content={description} />}
+  {noindex 
+    ? <meta name="robots" content="noindex, nofollow" />
+    : <meta name="robots" content="index, follow" />
+  }
+
+  <link rel="preload" href="/fonts/Oswald-Bold.woff2" as="font" type="font/woff2" crossorigin />
+  <slot name="head" />
+</head>
+<body class="font-oswald font-['Oswald'] antialiased bg-white text-black min-h-screen flex flex-col justify-between">
+
+  <!-- HEADSITE CHUNG CHO TOÀN BỘ WEBSITE -->
+  <header class="bg-white border-b border-gray-100 sticky top-0 z-50">
+    <div class="max-w-[1100px] mx-auto px-6 py-5 flex items-center justify-between">
+      
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-2 group">
+        <span class="font-light text-3xl text-[#2C6B9E] pb-1 opacity-60">|</span>
+        <span class="font-bold text-2xl text-[#2C6B9E] tracking-wide group-hover:opacity-80 transition-opacity">M</span>
+        <span class="font-light text-[15px] text-[#0D0D0D] tracking-[0.15em] uppercase mt-1 ml-1 group-hover:text-[#2C6B9E] transition-colors">MINOXUS.SPACE</span>
+      </a>
+
+      <!-- Search & Nav -->
+      <div class="flex items-center gap-14">
+        <!-- Search Box -->
+        <div class="hidden md:flex items-center border-b border-gray-300 w-[240px] pb-1 focus-within:border-[#2C6B9E] transition-colors">
+          <input type="text" placeholder="TÌM KIẾM..." class="w-full bg-transparent outline-none text-[#0D0D0D] text-[13px] font-light tracking-[0.1em] placeholder-gray-500" />
+          <button aria-label="Tìm kiếm" class="text-gray-400 hover:text-[#2C6B9E] transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </button>
+        </div>
+
+        <!-- Desktop Nav (Tự động Active theo trang) -->
+        <nav class="hidden md:flex gap-10 items-center">
+          <a href="/posts" class={isPost 
+            ? "font-medium text-[14px] text-[#2C6B9E] uppercase tracking-[0.15em] relative after:content-[''] after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-[#2C6B9E] after:rounded-full" 
+            : "font-light text-[14px] text-gray-500 hover:text-[#2C6B9E] transition-colors uppercase tracking-[0.15em]"}>BÀI VIẾT</a>
+          
+          <!-- Nút Sản Phẩm đã được update logic active -->
+          <a href="/products" class={isProduct 
+            ? "font-medium text-[14px] text-[#2C6B9E] uppercase tracking-[0.15em] relative after:content-[''] after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-[#2C6B9E] after:rounded-full" 
+            : "font-light text-[14px] text-gray-500 hover:text-[#2C6B9E] transition-colors uppercase tracking-[0.15em]"}>SẢN PHẨM</a>
+          
+          <a href="/" class={isHome 
+            ? "font-medium text-[14px] text-[#2C6B9E] uppercase tracking-[0.15em] relative after:content-[''] after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-[#2C6B9E] after:rounded-full" 
+            : "font-light text-[14px] text-gray-500 hover:text-[#2C6B9E] transition-colors uppercase tracking-[0.15em]"}>TRANG CHỦ</a>
+        </nav>
+      </div>
+
+      <!-- Mobile Hamburger -->
+      <button id="hamburger-btn" aria-label="Mở menu di động" class="md:hidden flex flex-col gap-1.5 p-2 text-[#0D0D0D]">
+        <span class="w-6 h-[1.5px] bg-current"></span>
+        <span class="w-6 h-[1.5px] bg-current"></span>
+        <span class="w-6 h-[1.5px] bg-current"></span>
+      </button>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="hidden flex-col bg-white border-b border-gray-100 px-6 absolute w-full z-40 shadow-sm">
+      <a href="/posts" class={`py-4 text-sm uppercase border-b border-gray-50 tracking-[0.2em] text-center ${isPost ? 'font-medium text-[#2C6B9E]' : 'font-light text-gray-600'}`}>BÀI VIẾT</a>
+      
+      <!-- Nút Sản Phẩm Mobile đã được update logic active -->
+      <a href="/products" class={`py-4 text-sm uppercase border-b border-gray-50 tracking-[0.2em] text-center ${isProduct ? 'font-medium text-[#2C6B9E]' : 'font-light text-gray-600'}`}>SẢN PHẨM</a>
+      
+      <a href="/" class={`py-4 text-sm uppercase tracking-[0.2em] text-center ${isHome ? 'font-medium text-[#2C6B9E]' : 'font-light text-gray-600'}`}>TRANG CHỦ</a>
+    </div>
+  </header>
+
+  <!-- PHẦN BODY CHÍNH CỦA TỪNG TRANG SẼ HIỆN Ở ĐÂY -->
+  <main class="flex-1">
+    <slot />
+  </main>
+
+  <!-- FOOTSITE CHUNG CHO TOÀN BỘ WEBSITE -->
+  <footer class="bg-[#fafafa] pt-16 pb-12 px-6 border-t border-gray-200 mt-16">
+    <div class="max-w-[1100px] mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-center md:items-end gap-12 mb-16">
+        <div class="flex flex-col items-center md:items-start">
+          <div class="flex gap-4 mb-6">
+            <a href="#" class="text-[#0D0D0D] hover:text-[#2C6B9E] font-medium text-[12px] uppercase tracking-widest transition-colors">FB</a>
+            <a href="#" class="text-[#0D0D0D] hover:text-[#2C6B9E] font-medium text-[12px] uppercase tracking-widest transition-colors">IG</a>
+            <a href="#" class="text-[#0D0D0D] hover:text-[#2C6B9E] font-medium text-[12px] uppercase tracking-widest transition-colors">TK</a>
+            <a href="#" class="text-[#0D0D0D] hover:text-[#2C6B9E] font-medium text-[12px] uppercase tracking-widest transition-colors">YT</a>
+            <a href="#" class="text-[#0D0D0D] hover:text-[#2C6B9E] font-medium text-[12px] uppercase tracking-widest transition-colors">X</a>
+          </div>
+          <p class="font-light text-[15px] text-[#2C6B9E] uppercase tracking-[0.1em]">NMINHWORK10@GMAIL.COM</p>
+        </div>
+        <div class="flex flex-col items-center md:items-end text-center md:text-right">
+          <p class="text-[12px] font-medium text-[#2C6B9E] opacity-80 mb-2 uppercase tracking-[0.25em]">WEB DESIGN | GRAPHIC DESIGNER</p>
+          <p class="font-bold text-3xl text-[#2C6B9E] uppercase tracking-widest">NGUYEN NGOC MINH</p>
+        </div>
+      </div>
+      <div class="text-center pt-8 border-t border-gray-200">
+        <p class="font-light text-[12px] text-[#555555] mb-8 max-w-2xl mx-auto leading-relaxed tracking-[0.05em]">Trang này có chứa liên kết affiliate. Khi bạn mua hàng qua các liên kết này, chúng tôi có thể nhận được hoa hồng mà không ảnh hưởng đến giá bạn trả.</p>
+        <div class="flex flex-wrap justify-center items-center gap-6 text-[11px] font-medium text-[#0D0D0D] uppercase tracking-[0.2em]">
+          <a href="#" class="hover:text-[#2C6B9E] transition-colors">VỀ CHÚNG TÔI</a>
+          <span class="text-gray-300">|</span>
+          <a href="#" class="hover:text-[#2C6B9E] transition-colors">CHÍNH SÁCH AFFILIATE</a>
+          <span class="text-gray-300">|</span>
+          <a href="#" class="hover:text-[#2C6B9E] transition-colors">LIÊN HỆ</a>
+          <span class="text-gray-300">|</span>
+          <a href="#" class="hover:text-[#2C6B9E] transition-colors">ĐIỀU KHOẢN</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const hamburgerBtn = document.getElementById('hamburger-btn');
+      const mobileMenu = document.getElementById('mobile-menu');
+      if (hamburgerBtn && mobileMenu) {
+        hamburgerBtn.addEventListener('click', () => {
+          mobileMenu.classList.toggle('hidden');
+          mobileMenu.classList.toggle('flex');
+        });
+      }
+    });
+  </script>
+</body>
+</html>

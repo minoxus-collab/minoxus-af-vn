@@ -1,0 +1,99 @@
+---
+import MainLayout from '../../layout/MainLayout.astro';
+import { getPostBySlug, getRelatedPosts } from '../../logic/post.ts';
+import { blocksToHtml } from '../../logic/blocksToHtml.ts';
+import { getPostTypeLabel, getPostTypeRoute } from '../../utils/postTaxonomy.ts';
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect('/404');
+}
+
+const { data: post, error } = await getPostBySlug(slug);
+
+if (error || !post) {
+  return Astro.redirect('/404');
+}
+
+const contentHtml = blocksToHtml(post.content);
+const { data: relatedPosts } = await getRelatedPosts(post.id, 3);
+
+const typeLabel = getPostTypeLabel(post.type);
+const typeRoute = getPostTypeRoute(post.type);
+---
+<MainLayout title={post.og_title || post.title} description={post.meta_desc}>
+
+  <div class="max-w-[720px] mx-auto px-4 md:px-6">
+    <!-- Breadcrumb -->
+    <div class="text-xs text-brand-mute pt-6">
+      <a href="/" class="hover:text-brand-blue">Trang chủ</a> /
+      <a href={typeRoute} class="hover:text-brand-blue">{typeLabel}</a> /
+      {post.title}
+    </div>
+
+    <!-- Header -->
+    <div class="pt-4 pb-8 border-b border-gray-200">
+      <div class="text-[11px] uppercase tracking-wide text-brand-blue font-bold font-oswald">{typeLabel}</div>
+      <h1 class="font-oswald uppercase text-[clamp(26px,4vw,42px)] leading-tight mt-2">{post.title}</h1>
+      <div class="text-brand-mute text-sm mt-3">
+        Đăng ngày {new Date(post.published_at).toLocaleDateString('vi-VN')}
+      </div>
+    </div>
+
+    <!-- Hiển thị ảnh đại diện bài viết chính (trọn vẹn kích thước chuẩn, không bị cắt) -->
+    {post.featured_image && (
+      <div class="my-8 overflow-hidden rounded-lg">
+        <img 
+          src={post.featured_image} 
+          alt={post.title} 
+          class="w-full h-auto rounded-lg" 
+        />
+      </div>
+    )}
+
+    <!-- Nội dung bài viết — override font-sans để dễ đọc hơn font-oswald mặc định -->
+    <article class="prose-content font-sans text-base leading-8 text-neutral-900 py-10">
+      <Fragment set:html={contentHtml} />
+    </article>
+
+    <!-- Bài viết liên quan -->
+    {relatedPosts && relatedPosts.length > 0 && (
+      <div class="border-t border-gray-200 py-10">
+        <h2 class="font-oswald uppercase text-center text-lg tracking-wide mb-6">Bài Viết Liên Quan</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {relatedPosts.map((rp) => (
+            <a href={`/posts/${rp.slug}`} class="block group">
+              {rp.featured_image ? (
+                <div class="aspect-[4/3] overflow-hidden rounded-md bg-gray-100">
+                  <img 
+                    src={rp.featured_image} 
+                    alt={rp.title} 
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                  />
+                </div>
+              ) : (
+                <div class="aspect-[4/3] bg-gradient-to-br from-brand-blue to-brand-black rounded-md"></div>
+              )}
+              <div class="text-[10px] uppercase tracking-wide text-brand-blue font-bold font-oswald mt-3">
+                {getPostTypeLabel(rp.type)}
+              </div>
+              <h3 class="font-oswald text-[15px] leading-snug mt-1 group-hover:text-brand-blue transition-colors">{rp.title}</h3>
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+
+</MainLayout>
+
+<script define:vars={{ postId: post?.id }}>
+  if (postId) {
+    fetch('/api/tracking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_type: 'view_post', post_id: postId }),
+    }).catch(() => {});
+  }
+</script>

@@ -1,0 +1,35 @@
+---
+import { getPostTypeLabel } from '../utils/postTaxonomy.ts';
+
+interface Props {
+  post: { 
+    title: string; 
+    slug: string; 
+    type: string; 
+    created_at: string;
+    featured_image?: string; 
+  };
+}
+const { post } = Astro.props;
+---
+<a href={`/posts/${post.slug}`} class="block group">
+  {post.featured_image ? (
+    <div class="aspect-[4/3] overflow-hidden rounded-md bg-gray-100">
+      <img 
+        src={post.featured_image} 
+        alt={post.title} 
+        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+      />
+    </div>
+  ) : (
+    <div class="aspect-[4/3] bg-gradient-to-br from-brand-blue to-brand-black rounded-md"></div>
+  )}
+
+  <div class="text-[10px] uppercase tracking-wide text-brand-blue font-bold font-oswald mt-3">
+    {getPostTypeLabel(post.type)}
+  </div>
+  <h3 class="font-oswald text-[15px] leading-snug mt-1 group-hover:text-brand-blue transition-colors">{post.title}</h3>
+  <div class="text-[11px] text-brand-mute mt-2">
+    {new Date(post.created_at).toLocaleDateString('vi-VN')}
+  </div>
+</a>

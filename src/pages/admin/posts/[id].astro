@@ -1,0 +1,182 @@
+---
+// src/pages/admin/posts/[id].astro
+import AdminLayout from '../../../layout/AdminLayout.astro';
+import EditorWrapper from '../../../editor/EditorWrapper';
+import { getPostById } from '../../../logic/post';
+
+// Lấy ID từ URL
+const { id } = Astro.params;
+
+// Lấy dữ liệu bài viết
+const { data: post, error } = await getPostById(id as string);
+
+if (error || !post) {
+  return Astro.redirect('/admin/posts?error=not-found');
+}
+
+// Chuyển đổi dữ liệu thành JSON an toàn để truyền xuống React
+const contentJson = JSON.stringify(post.content || []);
+
+// Khởi tạo Object chứa cấu hình SEO ban đầu để nạp vào SEOPanel
+const seoDataJson = JSON.stringify({
+  title: post.title || '',
+  slug: post.slug || '',
+  type: post.type || 'pillar',
+  status: post.status || 'draft',
+  meta_description: post.meta_desc || '',
+  generate_toc: post.generate_toc || false,
+  featured_image: post.featured_image || '',
+  og_title: post.og_title || '',
+  focus_keyword: post.focus_keyword || '',
+  canonical_url: post.canonical_url || ''
+});
+---
+
+<AdminLayout>
+  <form id="edit-post-form" class="flex flex-col h-[calc(100vh-2rem)] -mt-2" data-post-id={post.id}>
+    
+    <div class="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200 shrink-0 rounded-t-xl">
+      <div class="flex items-center space-x-4">
+        <h1 class="text-xl font-bold text-gray-900">Chỉnh sửa bài viết</h1>
+        
+        <div id="save-indicator" class="text-xs font-semibold px-3 py-1 rounded-md transition-all duration-300">
+          Đang khởi tạo...
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-3">
+        <a href={`/posts/${post.slug}`} target="_blank" class="text-sm font-medium text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors">
+          Xem thử
+        </a>
+        
+        <button type="button" id="draft-btn" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm focus:outline-none disabled:opacity-50">
+          Lưu nháp
+        </button>
+        
+        <button type="button" id="publish-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-all shadow-sm focus:outline-none disabled:opacity-50">
+          Xuất bản
+        </button>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto bg-gray-50 border-x border-b border-gray-200 rounded-b-xl">
+      <EditorWrapper client:only="react" initialContent={contentJson} initialSeoData={seoDataJson} />
+    </div>
+    
+  </form>
+</AdminLayout>
+
+<script>
+  import { updatePost } from '../../../logic/post';
+
+  const form = document.getElementById('edit-post-form') as HTMLFormElement;
+  const draftBtn = document.getElementById('draft-btn') as HTMLButtonElement;
+  const publishBtn = document.getElementById('publish-btn') as HTMLButtonElement;
+  const saveIndicator = document.getElementById('save-indicator') as HTMLElement;
+  
+  const postId = form?.dataset.postId;
+  let targetStatus = '';
+
+  // Hàm điều khiển hiển thị trạng thái động (Save Indicator)
+  function updateIndicator(state: 'unsaved' | 'saving' | 'saved' | 'error', timeStr?: string) {
+    if (state === 'unsaved') {
+      saveIndicator.className = "text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md";
+      saveIndicator.textContent = "Chưa lưu";
+    } else if (state === 'saving') {
+      saveIndicator.className = "text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md animate-pulse";
+      saveIndicator.textContent = "Đang lưu...";
+    } else if (state === 'saved') {
+      saveIndicator.className = "text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-md";
+      saveIndicator.textContent = timeStr ? `Đã lưu lúc ${timeStr}` : "Đã lưu bản ghi";
+    } else if (state === 'error') {
+      saveIndicator.className = "text-xs font-medium text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-md animate-bounce";
+      saveIndicator.textContent = "Lưu thất bại";
+    }
+  }
+
+  // Khởi tạo trạng thái Đã Lưu ban đầu cho bài viết cũ
+  const now = new Date();
+  const initialTime = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  updateIndicator('saved', initialTime);
+
+  // Phân luồng sự kiện khi bấm nút
+  draftBtn?.addEventListener('click', () => {
+    targetStatus = 'draft';
+    executeSave();
+  });
+
+  publishBtn?.addEventListener('click', () => {
+    targetStatus = 'published';
+    executeSave();
+  });
+
+  // Hỗ trợ phím tắt Ctrl + S thông minh
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      const statusInput = form?.querySelector('input[name="status"]') as HTMLInputElement;
+      targetStatus = statusInput ? statusInput.value : 'draft';
+      executeSave();
+    }
+  });
+
+  async function executeSave() {
+    if (!postId) return;
+    
+    // Đồng bộ trực tiếp trạng thái vào hidden input của React trước khi thu thập dữ liệu
+    const statusInput = form.querySelector('input[name="status"]') as HTMLInputElement;
+    if (statusInput) {
+      statusInput.value = targetStatus;
+    }
+
+    // Khóa tạm thời hệ thống nút chống click spam
+    if (draftBtn) draftBtn.disabled = true;
+    if (publishBtn) publishBtn.disabled = true;
+    updateIndicator('saving');
+
+    try {
+      const formData = new FormData(form);
+      const contentString = formData.get('content') as string;
+      const contentData = contentString ? JSON.parse(contentString) : [];
+
+      const data = {
+        title: formData.get('title') as string,
+        slug: formData.get('slug') as string,
+        type: formData.get('type') as 'pillar' | 'money' | 'support',
+        status: targetStatus as 'draft' | 'published',
+        meta_desc: formData.get('meta_description') as string,
+        content: contentData, 
+        generate_toc: formData.get('generate_toc') === 'true',
+        featured_image: formData.get('featured_image') as string,
+        og_title: formData.get('og_title') as string,
+        focus_keyword: formData.get('focus_keyword') as string,
+        canonical_url: formData.get('canonical_url') as string,
+      };
+
+      const { error } = await updatePost(postId, data);
+      if (error) throw error;
+
+      // Cập nhật mốc thời gian lưu thành công
+      const savedTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      updateIndicator('saved', savedTime);
+      
+    } catch (error: any) {
+      console.error('Lỗi khi cập nhật bài viết:', error);
+      updateIndicator('error');
+    } finally {
+      if (draftBtn) draftBtn.disabled = false;
+      if (publishBtn) publishBtn.disabled = false;
+    }
+  }
+
+  // cảnh báo rời trang khi chưa lưu
+  window.addEventListener('beforeunload', (e) => {
+    const indicatorText = saveIndicator?.textContent || '';
+    // Nếu trạng thái đang là "Chưa lưu" hoặc "Đang lưu..." thì bật cảnh báo
+    if (indicatorText.includes('Chưa lưu') || indicatorText.includes('Đang lưu')) {
+      e.preventDefault(); // Chuẩn W3C
+      e.returnValue = ''; // Bắt buộc đối với Chrome/Edge hiện đại
+      return ''; 
+    }
+  });
+</script>

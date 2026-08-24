@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Chi Tiết Sản Phẩm | Minoxus</title>
+    <!-- Nhúng Tailwind CSS và cấu hình màu thương hiệu -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brand: { blue: '#2C6B9E', black: '#0D0D0D', mute: '#6b7280' } },
+                    fontFamily: {
+                        oswald: ['Oswald', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Oswald:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="font-sans antialiased bg-white text-brand-black min-h-screen">
+
+    <!-- THANH CÔNG CỤ PREVIEW (Chỉ dành cho Demo) -->
+    <div class="bg-gray-900 text-white p-3 text-center flex justify-center gap-4 text-sm font-medium sticky top-0 z-50">
+        <span class="opacity-70 mt-1">Góc nhìn Preview:</span>
+        <button onclick="switchView('handmade')" id="btn-hm" class="px-4 py-1 bg-brand-blue rounded-full">Sản phẩm Handmade</button>
+        <button onclick="switchView('affiliate')" id="btn-af" class="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded-full">Sản phẩm Affiliate</button>
+    </div>
+
+    <!-- MAIN CONTAINER CHUẨN DỰ ÁN -->
+    <div class="max-w-[1100px] mx-auto px-6 py-10">
+        
+        <!-- Breadcrumb -->
+        <div class="text-[11px] uppercase tracking-wider text-brand-mute mb-8 font-oswald flex items-center gap-2">
+            <a href="#" class="hover:text-brand-blue">Trang chủ</a> <span>/</span>
+            <a href="#" class="hover:text-brand-blue">Sản Phẩm</a> <span>/</span>
+            <span id="bc-title" class="text-brand-black font-medium">Balo Da Bò Sáp Vintage</span>
+        </div>
+
+        <!-- PRODUCT LAYOUT -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-16">
+            
+            <!-- Cột Trái: Gallery -->
+            <div class="md:col-span-6 lg:col-span-7">
+                <div class="aspect-square bg-gray-50 rounded-xl overflow-hidden border border-gray-100 mb-4">
+                    <img id="main-img" src="https://images.unsplash.com/photo-1548036328-c9fa89d128fa?q=80&w=1000" class="w-full h-full object-cover" alt="Product">
+                </div>
+                <div class="grid grid-cols-4 gap-3" id="thumbnails">
+                    <div class="aspect-square rounded-lg border-2 border-brand-blue overflow-hidden cursor-pointer"><img src="https://images.unsplash.com/photo-1548036328-c9fa89d128fa?q=80&w=200" class="w-full h-full object-cover"></div>
+                    <div class="aspect-square rounded-lg border-2 border-transparent hover:border-gray-200 overflow-hidden cursor-pointer"><img src="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?q=80&w=200" class="w-full h-full object-cover"></div>
+                    <div class="aspect-square rounded-lg border-2 border-transparent hover:border-gray-200 overflow-hidden cursor-pointer"><img src="https://images.unsplash.com/photo-1491637639811-60e2756cc1c7?q=80&w=200" class="w-full h-full object-cover"></div>
+                </div>
+            </div>
+
+            <!-- Cột Phải: Thông tin & Action -->
+            <div class="md:col-span-6 lg:col-span-5 flex flex-col">
+                <div class="border-b border-gray-100 pb-6 mb-6">
+                    <div id="p-label" class="text-[11px] uppercase tracking-wide text-brand-blue font-bold font-oswald mb-2">ĐỒ THỦ CÔNG</div>
+                    <h1 id="p-title" class="font-oswald uppercase text-3xl leading-tight mb-4">Balo Da Bò Sáp Vintage</h1>
+                    <div class="flex items-end gap-3">
+                        <span id="p-price" class="text-2xl font-bold text-red-600">1.250.000 ₫</span>
+                        <span id="p-oldprice" class="text-sm text-gray-400 line-through mb-1">1.800.000 ₫</span>
+                    </div>
+                </div>
+
+                <!-- KHU VỰC ĐỘNG: Sẽ thay đổi tùy theo loại sản phẩm -->
+                <div id="dynamic-action-area" class="flex-grow">
+                    <!-- JS sẽ đổ Form hoặc Nút vào đây -->
+                </div>
+
+                <div class="mt-8 pt-6 border-t border-gray-100 text-[13px] text-brand-mute space-y-2">
+                    <p class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Tình trạng: <span class="text-brand-black font-medium">Còn hàng</span></p>
+                    <p class="flex items-center gap-2"><svg class="w-4 h-4 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Giao hàng: <span id="delivery-text" class="text-brand-black font-medium">3-5 ngày làm việc</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bài viết Chi tiết (Render từ Editor) -->
+        <div class="mt-16 pt-10 border-t border-gray-200">
+            <h2 class="font-oswald uppercase text-xl md:text-[24px] text-brand-blue tracking-wide mb-8 text-center">Chi Tiết Sản Phẩm</h2>
+            <article class="prose max-w-[720px] mx-auto font-sans text-base leading-8 text-neutral-800">
+                <p>Khám phá chiếc balo mang đậm phong cách cổ điển, được chế tác tỉ mỉ hoàn toàn bằng tay. Đây không chỉ là một phụ kiện đựng đồ, mà còn là một tuyên ngôn về phong cách sống tự do và bền bỉ.</p>
+                <h3 class="font-oswald text-lg uppercase mt-6 mb-2">Đặc điểm nổi bật</h3>
+                <ul class="list-disc pl-5 mb-6">
+                    <li>Chất liệu: 100% da bò sáp thật, càng dùng lâu da càng bóng.</li>
+                    <li>Khóa kéo bằng đồng nguyên khối chống gỉ sét.</li>
+                </ul>
+                <img src="https://images.unsplash.com/photo-1622560480654-d96214fdc887?q=80&w=800" class="rounded-lg mb-6 w-full object-cover">
+            </article>
+        </div>
+    </div>
+
+    <!-- SCRIPT ĐIỀU KHIỂN PREVIEW -->
+    <script>
+        const uiTemplates = {
+            handmade: {
+                label: "ĐỒ THỦ CÔNG",
+                title: "Balo Da Bò Sáp Nguyên Khối Vintage",
+                price: "1.250.000 ₫",
+                oldPrice: "1.800.000 ₫",
+                img: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?q=80&w=1000",
+                delivery: "3-5 ngày làm việc (Đóng gói thủ công)",
+                actionHtml: `
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-5">
+                        <h3 class="font-oswald uppercase text-[#0D0D0D] tracking-wide mb-4">Thông tin đặt hàng</h3>
+                        <form onsubmit="alert('Hệ thống sẽ gọi Resend gửi mail và lưu vào DB ở bước này!'); return false;" class="space-y-4">
+                            <div>
+                                <label class="block text-[11px] font-medium text-gray-500 uppercase mb-1">Họ và tên *</label>
+                                <input type="text" required class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-brand-blue transition-colors" placeholder="Vd: Nguyễn Văn A">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-medium text-gray-500 uppercase mb-1">Số điện thoại *</label>
+                                <input type="tel" required class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-brand-blue transition-colors" placeholder="Vd: 0912345678">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-medium text-gray-500 uppercase mb-1">Địa chỉ nhận hàng *</label>
+                                <textarea required rows="2" class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-brand-blue transition-colors resize-none" placeholder="Số nhà, Phường, Quận, Thành phố..."></textarea>
+                            </div>
+                            <button type="submit" class="w-full bg-brand-blue text-white font-oswald uppercase tracking-widest text-sm py-3 rounded-md hover:bg-[#1a4b72] transition-colors mt-2 shadow-md">
+                                Gửi Đơn Đặt Hàng
+                            </button>
+                            <p class="text-[10px] text-center text-brand-mute mt-2">Mình sẽ liên hệ lại qua Zalo/SĐT để xác nhận đơn hàng.</p>
+                        </form>
+                    </div>
+                `
+            },
+            affiliate: {
+                label: "MINOX'S PICK",
+                title: "Tài Khoản Netflix Premium Chuẩn 4K",
+                price: "25.000 ₫",
+                oldPrice: "65.000 ₫",
+                img: "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg",
+                delivery: "Giao hàng ngay tự động (Instant)",
+                actionHtml: `
+                    <div class="h-full flex flex-col justify-center py-6">
+                        <p class="text-sm text-gray-600 mb-6 leading-relaxed">Sản phẩm này được cung cấp bởi đối tác uy tín. Bạn sẽ được chuyển hướng đến trang thanh toán an toàn.</p>
+                        <a href="#" target="_blank" class="w-full bg-[#E50914] text-white font-oswald uppercase tracking-widest text-[15px] py-4 rounded-lg hover:bg-red-700 transition-colors shadow-lg flex items-center justify-center gap-3">
+                            Mua Giá Tốt Trên Netflix
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        </a>
+                        <div class="flex items-center gap-2 mt-4 text-[11px] text-gray-500 justify-center">
+                            <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span>Thanh toán an toàn 100%</span>
+                        </div>
+                    </div>
+                `
+            }
+        };
+
+        function switchView(type) {
+            const data = uiTemplates[type];
+            
+            // Cập nhật text
+            document.getElementById('bc-title').textContent = data.title;
+            document.getElementById('p-label').textContent = data.label;
+            document.getElementById('p-title').textContent = data.title;
+            document.getElementById('p-price').textContent = data.price;
+            document.getElementById('p-oldprice').textContent = data.oldPrice;
+            document.getElementById('main-img').src = data.img;
+            document.getElementById('delivery-text').textContent = data.delivery;
+            
+            // Cập nhật khối chức năng (Form hoặc Nút Affiliate)
+            document.getElementById('dynamic-action-area').innerHTML = data.actionHtml;
+
+            // Đổi màu nút Preview
+            document.getElementById('btn-hm').className = type === 'handmade' ? 'px-4 py-1 bg-brand-blue rounded-full' : 'px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded-full';
+            document.getElementById('btn-af').className = type === 'affiliate' ? 'px-4 py-1 bg-brand-blue rounded-full' : 'px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded-full';
+        }
+
+        // Chạy lần đầu
+        switchView('handmade');
+    </script>
+</body>
+</html>

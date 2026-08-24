@@ -1,0 +1,26 @@
+---
+import MainLayout from '../layout/MainLayout.astro';
+---
+
+<MainLayout title="404 - Không tìm thấy bài viết" noindex={true}>
+  <div class="max-w-[600px] mx-auto px-6 py-28 text-center">
+    <div class="text-[11px] uppercase tracking-wide text-brand-blue font-bold font-oswald mb-3">
+      Lỗi 404
+    </div>
+    
+    <h1 class="font-oswald uppercase text-[clamp(40px,8vw,72px)] leading-none text-brand-black mb-4">
+      KHÔNG TÌM THẤY BÀI VIẾT
+    </h1>
+    
+    <p class="font-sans text-base text-brand-mute mb-10 leading-relaxed">
+      Bài viết hoặc trang bạn đang tìm kiếm có thể đã bị xoá, đổi đường dẫn hoặc đang ở trạng thái nháp.
+    </p>
+    
+    <a 
+      href="/" 
+      class="inline-block bg-brand-blue hover:bg-brand-blue-dark text-white font-oswald font-medium text-[13px] uppercase px-10 py-4 tracking-[0.15em] transition-colors duration-300 shadow-sm"
+    >
+      Quay Lại Trang Chủ
+    </a>
+  </div>
+</MainLayout>

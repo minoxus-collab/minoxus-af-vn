@@ -1,0 +1,259 @@
+---
+// src/pages/admin/tracking/index.astro
+import AdminLayout from '../../../layout/AdminLayout.astro';
+import { getDashboardData } from '../../../logic/dashboard';
+
+// 1. Fetch toàn bộ dữ liệu từ DB
+const data = await getDashboardData();
+
+// 2. Xử lý Logic Trạng thái Link Affiliate
+let activeLinks = 0;
+let expiringLinks = 0;
+let expiredLinks = 0;
+const totalLinks = data.allLinks.length;
+
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+data.allLinks.forEach((link: any) => {
+  if (!link.expired_at) {
+    activeLinks++;
+    return;
+  }
+  const exp = new Date(link.expired_at);
+  exp.setHours(0, 0, 0, 0);
+  const diffDays = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) expiredLinks++;
+  else if (diffDays === 1) expiringLinks++;
+  else activeLinks++;
+});
+
+// THÊM MỚI TẠI ĐÂY: Xử lý trước thuộc tính isExpired cho bảng Top Links để tránh lỗi Parser của Astro
+const processedTopLinks = data.topLinks.map((link: any) => {
+  let isExpired = false;
+  if (link.expired_at) {
+    const exp = new Date(link.expired_at);
+    exp.setHours(0, 0, 0, 0);
+    if ((exp.getTime() - today.getTime()) <= 0) {
+      isExpired = true;
+    }
+  }
+  return { ...link, isExpired };
+});
+
+// 3. Chuẩn bị Dữ liệu cho Biểu đồ (30 ngày gần nhất)
+const last30DaysLabels = [...Array(30)].map((_, i) => {
+  const d = new Date();
+  d.setDate(d.getDate() - (29 - i));
+  return d.toISOString().split('T')[0];
+});
+
+const chartDataValues = last30DaysLabels.map(date => {
+  return data.trackingEvents.filter((e: any) => e.created_at.startsWith(date)).length;
+});
+
+const displayLabels = last30DaysLabels.map(date => {
+  const [, month, day] = date.split('-');
+  return `${day}/${month}`;
+});
+
+const chartLabelsJson = JSON.stringify(displayLabels);
+const chartValuesJson = JSON.stringify(chartDataValues);
+---
+
+<AdminLayout>
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Tracking Dashboard</h1>
+    <p class="text-sm text-gray-500 mt-1">Tổng quan hiệu suất hệ thống và lượt xem 30 ngày qua.</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div class="flex items-center justify-between">
+        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Tổng Bài Viết</p>
+        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v10a2 2 0 01-2 2z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 4v5h5M9 14h6M9 10h6"></path></svg>
+      </div>
+      <div class="mt-4">
+        <h3 class="text-3xl font-bold text-gray-900">{data.totalPosts}</h3>
+        <p class="text-sm text-emerald-600 mt-1 font-medium">{data.publishedPosts} bài đã xuất bản</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div class="flex items-center justify-between">
+        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Tổng Link Affiliate</p>
+        <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+      </div>
+      <div class="mt-4">
+        <h3 class="text-3xl font-bold text-gray-900">{totalLinks}</h3>
+        <p class="text-sm text-gray-500 mt-1">Bao gồm cả link đã hết hạn</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
+      <div class="flex items-center justify-between mb-4">
+        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Sức khỏe chiến dịch (Link Status)</p>
+      </div>
+      <div class="grid grid-cols-3 gap-4 text-center">
+        <div class="bg-green-50 p-3 rounded-lg border border-green-100">
+          <p class="text-2xl font-bold text-green-700">{activeLinks}</p>
+          <p class="text-xs font-semibold text-green-800 uppercase mt-1">🟢 Đang hoạt động</p>
+        </div>
+        <div class="bg-amber-50 p-3 rounded-lg border border-amber-100">
+          <p class="text-2xl font-bold text-amber-700">{expiringLinks}</p>
+          <p class="text-xs font-semibold text-amber-800 uppercase mt-1">🟡 Sắp hết hạn</p>
+        </div>
+        <div class="bg-red-50 p-3 rounded-lg border border-red-100">
+          <p class="text-2xl font-bold text-red-700">{expiredLinks}</p>
+          <p class="text-xs font-semibold text-red-800 uppercase mt-1">🔴 Đã hết hạn</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold text-gray-900">Lượt xem theo ngày (30 ngày qua)</h3>
+    </div>
+    <div class="w-full h-[300px] relative">
+      <canvas id="viewsChart"></canvas>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+    
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h3 class="text-base font-bold text-gray-900">🔥 Top 10 Bài viết nhiều View nhất</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-white">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Bài viết</th>
+              <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Lượt xem</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-100">
+            {data.topPosts.length > 0 ? data.topPosts.map((post: any) => (
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-3">
+                  <div class="text-sm font-medium text-gray-900 truncate max-w-[250px]">{post.title || 'Chưa có tiêu đề'}</div>
+                  <div class="text-xs text-gray-500 mt-0.5">{post.type} • {post.status}</div>
+                </td>
+                <td class="px-6 py-3 text-center text-sm font-bold text-blue-600">
+                  {post.views || 0}
+                </td>
+              </tr>
+            )) : (
+              <tr><td colspan="2" class="px-6 py-8 text-center text-sm text-gray-500">Chưa có dữ liệu</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h3 class="text-base font-bold text-gray-900">💰 Top 10 Affiliate nhiều Click nhất</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-white">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Chiến dịch / Sản phẩm</th>
+              <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Lượt Click</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-100">
+            {processedTopLinks.length > 0 ? processedTopLinks.map((link: any) => (
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-3">
+                  <div class="text-sm font-medium text-gray-900 truncate max-w-[250px] flex items-center">
+                    <span class={`w-2 h-2 rounded-full mr-2 shrink-0 ${link.isExpired ? 'bg-red-500' : 'bg-green-500'}`}></span>
+                    <span class="truncate">{link.name}</span>
+                  </div>
+                  <div class="text-xs text-gray-500 mt-0.5">{link.platform}</div>
+                </td>
+                <td class="px-6 py-3 text-center text-sm font-bold text-emerald-600">
+                  {link.clicks || 0}
+                </td>
+              </tr>
+            )) : (
+              <tr><td colspan="2" class="px-6 py-8 text-center text-sm text-gray-500">Chưa có dữ liệu</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</AdminLayout>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div id="chart-data" class="hidden" 
+  data-labels={chartLabelsJson} 
+  data-values={chartValuesJson}>
+</div>
+
+<script>
+
+  declare const Chart: any;
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    const dataContainer = document.getElementById('chart-data');
+    if (!dataContainer) return;
+
+    const labels = JSON.parse(dataContainer.dataset.labels || '[]');
+    const values = JSON.parse(dataContainer.dataset.values || '[]');
+
+    const ctx = document.getElementById('viewsChart') as HTMLCanvasElement;
+    if (!ctx) return;
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Lượt xem bài viết',
+          data: values,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 2,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: '#3b82f6',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1f2937',
+            padding: 12,
+            titleFont: { size: 13 },
+            bodyFont: { size: 14, weight: 'bold' },
+            displayColors: false
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 },
+            grid: { color: '#f3f4f6' }
+          },
+          x: {
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  });
+</script>

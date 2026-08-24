@@ -1,0 +1,157 @@
+---
+// src/pages/admin/posts/index.astro
+import AdminLayout from '../../../layout/AdminLayout.astro';
+import { getAllPosts } from '../../../logic/post';
+
+// Gọi hàm lấy dữ liệu từ Supabase (chạy trên Server)
+const { data: posts, error } = await getAllPosts();
+---
+
+<AdminLayout>
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Bài viết & SEO</h1>
+      <p class="text-sm text-gray-500 mt-1">Quản lý nội dung, pillar content và bài viết affiliate.</p>
+    </div>
+    <a 
+      href="/admin/posts/new" 
+      class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm inline-flex items-center"
+    >
+      <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+      Viết bài mới
+    </a>
+  </div>
+
+  {error ? (
+    <div class="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 font-medium">
+      Lỗi tải dữ liệu từ cơ sở dữ liệu: {error.message}
+    </div>
+  ) : (
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">STT</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tiêu đề</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Thể loại</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Trạng thái</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ngày đăng</th>
+              <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Lượt xem</th>
+              <th scope="col" class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Hành động</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {posts && posts.length > 0 ? (
+              posts.map((post, index) => (
+                <tr class="hover:bg-gray-50 transition-colors">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
+                    {index + 1}
+                  </td>
+                  
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <a href={`/admin/posts/${post.id}`} class="font-medium text-blue-600 hover:text-blue-800 hover:underline truncate max-w-[200px] block">
+                      {post.title}
+                    </a>
+                  </td>
+                  
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                      post.type === 'pillar' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                      post.type === 'money' ? 'bg-green-50 text-green-700 border-green-200' :
+                      'bg-blue-50 text-blue-700 border-blue-200'
+                    }`}>
+                      {post.type}
+                    </span>
+                  </td>
+                  
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                      post.status === 'published' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-600 border-gray-200'
+                    }`}>
+                      {post.status === 'published' ? 'published' : 'draft'}
+                    </span>
+                  </td>
+                  
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {post.created_at ? new Date(post.created_at).toLocaleDateString('vi-VN', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : 'Chưa cập nhật'}
+                  </td>
+                  
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-center font-medium">
+                    {post.views || 0}
+                  </td>
+                  
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                    <a href={`/admin/posts/${post.id}`} class="text-blue-600 hover:text-blue-900 transition-colors">Sửa</a>
+                    <button 
+                      type="button"
+                      class="text-red-600 hover:text-red-900 transition-colors delete-btn"
+                      data-id={post.id}
+                      data-title={post.title}
+                    >
+                      Xóa
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                  <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v10a2 2 0 01-2 2z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14 4v5h5M9 14h6M9 10h6"></path></svg>
+                  <p class="text-base font-medium text-gray-900">Chưa có bài viết nào</p>
+                  <p class="text-sm mt-1">Hãy nhấn "Viết bài mới" để bắt đầu xây dựng nội dung.</p>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+</AdminLayout>
+
+<script>
+  import { deletePost } from '../../../logic/post';
+
+  // Lắng nghe sự kiện click trên tất cả các nút có class .delete-btn
+  const deleteButtons = document.querySelectorAll('.delete-btn');
+
+  deleteButtons.forEach(button => {
+    button.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const postId = btn.dataset.id;
+      const postTitle = btn.dataset.title;
+
+      if (!postId) return;
+
+      const isConfirm = window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn bài viết:\n"${postTitle || 'Không xác định'}"\n\nHành động này không thể hoàn tác!`);
+      
+      if (isConfirm) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="animate-pulse">Đang xóa...</span>';
+
+        try {
+          // Gọi API xóa từ file logic
+          const { error } = await deletePost(postId);
+          if (error) throw error;
+          
+          // Ẩn dòng (row) vừa xóa khỏi bảng ngay lập tức
+          const row = btn.closest('tr');
+          if (row) row.remove();
+          
+        } catch (err: any) {
+          console.error("Lỗi khi xóa:", err);
+          alert("Không thể xóa bài viết: " + err.message);
+          btn.disabled = false;
+          btn.innerHTML = 'Xóa';
+        }
+      }
+    });
+  });
+</script>

@@ -1,0 +1,235 @@
+---
+import MainLayout from '../../layout/MainLayout.astro';
+import { getProducts } from '../../logic/product';
+
+// Kéo dữ liệu từ Database
+const { data: allProducts } = await getProducts({ limit: 100, status: 'published' });
+const products = allProducts || [];
+
+// Tự động trích xuất các Danh mục (Category) độc nhất từ Database
+const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
+---
+
+<MainLayout title="MINOXUS | Sản Phẩm & Gợi Ý">
+    <!-- KHUNG CHỨA (Đồng bộ 100% với trang Posts) -->
+    <div class="max-w-[1100px] mx-auto px-6 py-6 font-sans">
+        
+        <!-- 1. BAR ĐIỀU HƯỚNG & CÔNG TẮC -->
+        <div class="flex items-center justify-between mb-8 relative z-30">
+            
+            <!-- Nút Danh mục (Dropdown) -->
+            <div class="relative group hidden md:block">
+                <button class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg font-semibold text-sm text-gray-700 bg-white hover:border-[#2C6B9E] hover:text-[#2C6B9E] transition-colors">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    Danh mục
+                </button>
+                
+                <!-- Menu xổ xuống -->
+                <div class="absolute left-0 top-full mt-2 w-48 bg-white border border-gray-100 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 flex flex-col py-2">
+                    <a href="#" onclick="filterByCategory('all'); event.preventDefault();" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#2C6B9E] font-medium">Tất cả</a>
+                    {categories.map(cat => (
+                        <a href="#" onclick={`filterByCategory('${cat}'); event.preventDefault();`} class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#2C6B9E] font-medium capitalize">{cat}</a>
+                    ))}
+                </div>
+            </div>
+            
+            <!-- Công tắc chuyển trang -->
+            <div class="flex bg-white border border-gray-200 rounded-full p-1 mx-auto md:mx-0 shadow-sm relative">
+                <button id="tab-handmade" onclick="switchTab('handmade')" class="px-6 py-2 rounded-full font-semibold text-sm text-white bg-[#2C6B9E] transition-all shadow-md">
+                    Đồ Thủ Công
+                </button>
+                <button id="tab-affiliate" onclick="switchTab('affiliate')" class="px-6 py-2 rounded-full font-semibold text-sm text-gray-500 transition-all">
+                    Gợi Ý
+                </button>
+            </div>
+            
+            <div class="hidden md:block w-[100px]"></div> <!-- Cân bằng layout -->
+        </div>
+
+        <!-- 2. HERO BANNER (Dùng tone xanh thương hiệu) -->
+        <div class="relative w-full rounded-2xl overflow-hidden bg-[#1e3a5f] min-h-[300px] md:min-h-[360px] flex items-center mb-10 shadow-lg group">
+            <div class="absolute inset-0">
+                <img id="banner-image" src="https://images.unsplash.com/photo-1491637639811-60e2756cc1c7?q=80&w=1200&auto=format&fit=crop" alt="Banner" class="absolute right-0 w-full md:w-2/3 h-full object-cover opacity-50 md:opacity-80 transition-all duration-500">
+                <div class="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-[#1e3a5f] via-[#1e3a5f]/90 to-transparent"></div>
+            </div>
+
+            <div class="relative z-10 p-6 md:p-12 w-full md:w-1/2">
+                <h2 id="banner-title" class="font-oswald uppercase text-[clamp(26px,4vw,38px)] text-white leading-tight mb-3">Chế tác thủ công<br>Tinh tế & Bền bỉ</h2>
+                <p id="banner-desc" class="text-gray-300 text-sm md:text-base mb-6 max-w-sm font-light">Những món đồ da thật được làm tay 100% bởi Minox, mang đậm dấu ấn cá nhân.</p>
+                
+                <button class="bg-white text-[#2C6B9E] font-bold px-6 py-3 rounded-full flex items-center gap-2 hover:bg-gray-50 transition-transform active:scale-95 shadow-md">
+                    Khám phá ngay 
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. FEATURES BAR -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-4 md:p-6 mb-12 shadow-sm">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:divide-x divide-gray-100">
+                <div class="flex items-center gap-3 px-2">
+                    <svg class="text-[#2C6B9E] w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <div><h4 class="text-xs md:text-sm font-bold text-gray-800">Sản phẩm tuyển chọn</h4><p class="text-[10px] md:text-xs text-brand-mute font-light">Chất lượng & uy tín</p></div>
+                </div>
+                <div class="flex items-center gap-3 px-2">
+                    <svg class="text-[#2C6B9E] w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                    <div><h4 class="text-xs md:text-sm font-bold text-gray-800">Giá tốt mỗi ngày</h4><p class="text-[10px] md:text-xs text-brand-mute font-light">Tiết kiệm đến 40%</p></div>
+                </div>
+                <div class="flex items-center gap-3 px-2">
+                    <svg class="text-[#2C6B9E] w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                    <div><h4 class="text-xs md:text-sm font-bold text-gray-800">Hỗ trợ tận tâm</h4><p class="text-[10px] md:text-xs text-brand-mute font-light">7 ngày trong tuần</p></div>
+                </div>
+                <div class="flex items-center gap-3 px-2">
+                    <svg class="text-[#2C6B9E] w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <div><h4 class="text-xs md:text-sm font-bold text-gray-800">Đổi trả dễ dàng</h4><p class="text-[10px] md:text-xs text-brand-mute font-light">Trong 7 ngày</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. KHU VỰC SẢN PHẨM -->
+        <div class="mb-16">
+            <div class="flex justify-between items-end mb-6 border-b border-gray-100 pb-2">
+                <h3 id="section-title" class="font-oswald uppercase text-xl md:text-[24px] text-[#2C6B9E] tracking-wide">Sản phẩm Da Thủ Công</h3>
+                <a href="#" class="text-brand-mute font-semibold text-xs md:text-sm flex items-center gap-1 hover:text-[#2C6B9E] transition-colors">
+                    Xem tất cả <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </a>
+            </div>
+
+            <!-- Sử dụng Flex Wrap thay vì Grid thuần để khi ít sản phẩm sẽ tự động canh giữa hoặc canh trái gọn gàng -->
+            <div id="product-grid" class="flex flex-wrap justify-center md:justify-start gap-4 md:gap-5">
+                <!-- Data Rendered by JS -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SCRIPT LOGIC (Chứa biến Active Type và Current Category) -->
+    <script define:vars={{ dbProducts: products }}>
+        const formatMoney = (amount) => {
+            if (!amount) return 'Liên hệ';
+            return new Intl.NumberFormat('vi-VN').format(amount) + 'đ';
+        };
+
+        // Biến lưu trạng thái hiện tại
+        let currentType = 'handmade';
+        let currentCategory = 'all';
+
+        window.renderProducts = function() {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
+            
+            // Lọc theo cả Type (Tab) và Category (Dropdown)
+            let filteredData = dbProducts.filter(item => item.product_type === currentType);
+            if (currentCategory !== 'all') {
+                filteredData = filteredData.filter(item => item.category === currentCategory);
+            }
+
+            if (filteredData.length === 0) {
+                grid.innerHTML = `<div class="w-full py-16 text-center text-brand-mute text-sm font-light">Chưa có sản phẩm nào phù hợp.</div>`;
+                return;
+            }
+
+            filteredData.forEach(item => {
+                const isAffiliate = currentType === 'affiliate';
+                const detailLink = `/products/${item.slug}`;
+                const imgUrl = (item.gallery && item.gallery.length > 0) ? item.gallery[0].url : 'https://placehold.co/400x400?text=No+Image';
+                const subtitleText = isAffiliate ? (item.brand || 'Gợi ý') : (item.category || 'Thủ công');
+                
+                const featureIcon = isAffiliate 
+                    ? `<svg class="w-3 h-3 text-[#2C6B9E]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`
+                    : `<svg class="w-3 h-3 text-[#2C6B9E]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>`;
+                
+                const cartBtnClass = isAffiliate ? 'bg-[#2C6B9E] hover:bg-[#1a4b72]' : 'bg-[#1e293b] hover:bg-black';
+                const cartIcon = isAffiliate
+                    ? `<path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>`
+                    : `<path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>`;
+
+                let badgeHtml = '';
+                if (item.price && item.compare_at_price && item.compare_at_price > item.price) {
+                    const discount = Math.round((1 - item.price / item.compare_at_price) * 100);
+                    badgeHtml = `<div class="absolute top-0 left-0 bg-[#ef4444] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-br-lg z-10 shadow-sm">-${discount}%</div>`;
+                }
+
+                const priceText = item.price ? formatMoney(item.price) : 'Liên hệ';
+                const oldPriceText = item.compare_at_price ? formatMoney(item.compare_at_price) : '';
+
+                // CSS Card: Tính toán độ rộng để hiển thị 2 cột Mobile, 4 cột Desktop
+                const cardClass = "w-[calc(50%-0.5rem)] md:w-[calc(25%-0.95rem)] bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow relative flex flex-col group";
+
+                const card = `
+                    <a href="${detailLink}" class="${cardClass}">
+                        ${badgeHtml}
+                        <div class="relative w-full aspect-square bg-gray-50 overflow-hidden">
+                            <img src="${imgUrl}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                        </div>
+                        
+                        <div class="p-3 md:p-4 flex flex-col flex-grow">
+                            <h4 class="text-xs md:text-sm font-semibold text-gray-900 line-clamp-2 leading-snug mb-1 min-h-[2.5rem]">${item.title}</h4>
+                            
+                            <div class="flex items-center gap-1 mt-1 mb-3 text-[10px] md:text-xs text-brand-mute font-medium capitalize">
+                                ${featureIcon}
+                                <span>${subtitleText}</span>
+                            </div>
+                            
+                            <div class="flex justify-between items-end mt-auto">
+                                <div class="flex flex-col">
+                                    <span class="text-[13px] md:text-[15px] font-bold text-[#ef4444]">${priceText}</span>
+                                    ${oldPriceText ? `<span class="text-[10px] text-gray-400 line-through">${oldPriceText}</span>` : '<span class="text-[10px] text-transparent hidden md:block">-</span>'}
+                                </div>
+                                <button class="w-7 h-7 md:w-8 md:h-8 rounded-full ${cartBtnClass} text-white flex items-center justify-center shrink-0 shadow-sm transition-colors" onclick="event.preventDefault(); window.location.href='${detailLink}';">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">${cartIcon}</svg>
+                                </button>
+                            </div>
+                        </div>
+                    </a>
+                `;
+                grid.innerHTML += card;
+            });
+        };
+
+        // Hàm click từ Dropdown Danh mục
+        window.filterByCategory = function(categoryName) {
+            currentCategory = categoryName;
+            renderProducts();
+        };
+
+        window.switchTab = function(type) {
+            currentType = type;
+            currentCategory = 'all'; // Reset danh mục khi đổi tab
+
+            const btnHandmade = document.getElementById('tab-handmade');
+            const btnAffiliate = document.getElementById('tab-affiliate');
+            
+            btnHandmade.className = "px-6 py-2 rounded-full font-semibold text-sm text-gray-500 transition-all";
+            btnAffiliate.className = "px-6 py-2 rounded-full font-semibold text-sm text-gray-500 transition-all";
+            
+            if (type === 'handmade') {
+                btnHandmade.className = "px-6 py-2 rounded-full font-semibold text-sm text-white bg-[#2C6B9E] transition-all shadow-md";
+            } else {
+                btnAffiliate.className = "px-6 py-2 rounded-full font-semibold text-sm text-white bg-[#2C6B9E] transition-all shadow-md";
+            }
+
+            const sectionTitle = document.getElementById('section-title');
+            const bTitle = document.getElementById('banner-title');
+            const bDesc = document.getElementById('banner-desc');
+            const bImg = document.getElementById('banner-image');
+            
+            if (type === 'handmade') {
+                sectionTitle.textContent = "SẢN PHẨM DA THỦ CÔNG";
+                bTitle.innerHTML = "Chế tác thủ công<br>Tinh tế & Bền bỉ";
+                bDesc.textContent = "Những món đồ da thật được làm tay 100% bởi Minox, mang đậm dấu ấn cá nhân.";
+                bImg.src = "https://images.unsplash.com/photo-1491637639811-60e2756cc1c7?q=80&w=1200&auto=format&fit=crop";
+            } else {
+                sectionTitle.textContent = "SẢN PHẨM GỢI Ý";
+                bTitle.innerHTML = "Gợi ý chọn lọc<br>Giá tốt mỗi ngày";
+                bDesc.textContent = "Sản phẩm chất lượng từ các thương hiệu uy tín, được Minoxus tuyển chọn.";
+                bImg.src = "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?q=80&w=1200&auto=format&fit=crop";
+            }
+
+            renderProducts();
+        };
+
+        // Khởi chạy mặc định
+        renderProducts();
+    </script>
+</MainLayout>

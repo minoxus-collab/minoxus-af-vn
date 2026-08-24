@@ -1,0 +1,20 @@
+---
+// src/pages/admin/products/new.astro
+import AdminLayout from '../../../layout/AdminLayout.astro';
+import ProductEditor from '../../../components/admin/ProductEditor';
+---
+
+<AdminLayout>
+  <div class="mb-6">
+    <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
+      <a href="/admin/products" class="hover:underline">Sản phẩm</a>
+      <span>/</span>
+      <span class="text-gray-900 font-medium">Thêm mới</span>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900">Thêm sản phẩm mới</h1>
+    <p class="text-sm text-gray-500 mt-1">Tạo sản phẩm Handmade hoặc liên kết Affiliate mới cho hệ thống.</p>
+  </div>
+
+  <!-- Gọi component React ProductEditor ở chế độ Thêm mới -->
+  <ProductEditor client:load initialData={null} />
+</AdminLayout>

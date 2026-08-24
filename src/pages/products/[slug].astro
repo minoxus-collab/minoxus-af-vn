@@ -1,0 +1,369 @@
+---
+// src/pages/products/[slug].astro
+import MainLayout from '../../layout/MainLayout.astro';
+import { getProductBySlug } from '../../logic/product';
+import { blocksToHtml } from '../../logic/blocksToHtml'; 
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect('/404');
+}
+
+const { data: product, error } = await getProductBySlug(slug);
+
+if (error || !product) {
+  return Astro.redirect('/404');
+}
+
+const contentHtml = product.content ? blocksToHtml(product.content) : '';
+const isAffiliate = product.product_type === 'affiliate' || product.product_type === 'Affiliate';
+const typeLabel = isAffiliate ? 'GỢI Ý' : 'ĐỒ THỦ CÔNG';
+
+let galleryArray: any[] = [];
+try {
+  if (typeof product.gallery === 'string') galleryArray = JSON.parse(product.gallery);
+  else if (Array.isArray(product.gallery)) galleryArray = product.gallery;
+} catch (e) { galleryArray = []; }
+
+const getImgUrl = (img: any) => {
+  if (!img) return 'https://placehold.co/1000x1000?text=No+Image';
+  if (typeof img === 'string') return img;
+  return img.url || img.public_url || img.src || 'https://placehold.co/1000x1000?text=No+Image';
+};
+const mainImageUrl = galleryArray.length > 0 ? getImgUrl(galleryArray[0]) : 'https://placehold.co/1000x1000?text=No+Image';
+
+let attributesArray: any[] = [];
+try {
+  let rawAttrs = product.attributes;
+  if (typeof rawAttrs === 'string') rawAttrs = JSON.parse(rawAttrs);
+  
+  if (Array.isArray(rawAttrs)) {
+    attributesArray = rawAttrs.map((attr: any) => {
+      const name = attr.name || attr.key || attr.attribute || 'Phân loại';
+      let opts: string[] = [];
+      if (Array.isArray(attr.options)) opts = attr.options;
+      else if (Array.isArray(attr.values)) opts = attr.values;
+      else if (typeof attr.value === 'string') opts = attr.value.split(',').map((s: string) => s.trim());
+      else if (typeof attr.options === 'string') opts = attr.options.split(',').map((s: string) => s.trim());
+      return { name, options: opts.filter(Boolean) };
+    }).filter((a: any) => a.options.length > 0);
+  } else if (rawAttrs && typeof rawAttrs === 'object') {
+    attributesArray = Object.keys(rawAttrs).map(key => {
+      const val = rawAttrs[key];
+      let opts: string[] = [];
+      if (Array.isArray(val)) opts = val;
+      else if (typeof val === 'string') opts = val.split(',').map((s: string) => s.trim());
+      return { name: key, options: opts.filter(Boolean) };
+    }).filter(a => a.options.length > 0);
+  }
+} catch (e) { attributesArray = []; }
+
+const formatMoney = (amount: number | null | undefined) => {
+  if (!amount) return 'Liên hệ';
+  return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
+};
+
+let discountPercent = 0;
+if (product.price && product.compare_at_price && product.compare_at_price > product.price) {
+  discountPercent = Math.round((1 - product.price / product.compare_at_price) * 100);
+}
+---
+
+<!-- Bọc CSS Cứng cho nút phân loại để 100% không bị đơ -->
+<style is:global>
+  .attr-btn {
+    border-color: #e5e7eb;
+    color: #4b5563;
+  }
+  .attr-btn.is-active {
+    border-color: #2C6B9E !important;
+    color: #2C6B9E !important;
+    background-color: rgba(44, 107, 158, 0.1) !important;
+  }
+</style>
+
+<MainLayout title={`${product.meta_title || product.title} | Minoxus`} description={product.meta_description}>
+  
+  <div class="max-w-[1100px] mx-auto px-6 py-10 font-sans">
+    
+    <div class="text-[11px] uppercase tracking-wider text-brand-mute mb-8 font-oswald flex items-center gap-2">
+      <a href="/" class="hover:text-[#2C6B9E] transition-colors">TRANG CHỦ</a> <span>/</span>
+      <a href="/products" class="hover:text-[#2C6B9E] transition-colors">SẢN PHẨM</a> <span>/</span>
+      <span class="text-[#0D0D0D] font-medium truncate max-w-[200px] sm:max-w-md">{product.title}</span>
+    </div>
+
+    <div class="flex flex-col md:flex-row gap-10 lg:gap-16">
+      
+      <!-- CỘT TRÁI: GALLERY -->
+      <div class="w-full md:w-1/2 lg:w-7/12 flex flex-col gap-4">
+        <div class="relative w-full bg-gray-50 rounded-xl overflow-hidden border border-gray-100 shadow-sm" style="padding-top: 100%;">
+          {discountPercent > 0 && (
+            <div class="absolute top-0 left-0 bg-[#ef4444] text-white text-xs font-bold px-3 py-1.5 rounded-br-lg z-20 shadow-sm">
+              -{discountPercent}%
+            </div>
+          )}
+          <img id="main-img" src={mainImageUrl} alt={product.title} class="absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-300" />
+        </div>
+        
+        {galleryArray.length > 1 && (
+          <div class="flex flex-wrap gap-3" id="thumbnails">
+            {galleryArray.map((img: any, index: number) => {
+              const imgUrl = getImgUrl(img);
+              return (
+                <div 
+                  data-url={imgUrl}
+                  class={`gallery-thumb relative w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-lg border-2 overflow-hidden cursor-pointer transition-colors ${index === 0 ? 'border-[#2C6B9E]' : 'border-transparent hover:border-gray-200'}`}
+                >
+                  <img src={imgUrl} alt={`${product.title} - ảnh ${index + 1}`} class="absolute top-0 left-0 w-full h-full object-cover" />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <!-- CỘT PHẢI: THÔNG TIN & FORM -->
+      <div class="w-full md:w-1/2 lg:w-5/12 flex flex-col">
+        <div class="border-b border-gray-100 pb-6 mb-6">
+          <div class="text-[11px] uppercase tracking-wide text-[#2C6B9E] font-bold font-oswald mb-2">{typeLabel}</div>
+          <h1 class="font-oswald uppercase text-3xl leading-tight mb-4 text-[#0D0D0D]">{product.title}</h1>
+          <div class="flex items-end gap-3">
+            <span class="text-2xl font-bold text-[#ef4444]">{formatMoney(product.price)}</span>
+            {product.compare_at_price && (
+              <span class="text-sm text-gray-400 line-through mb-1">{formatMoney(product.compare_at_price)}</span>
+            )}
+          </div>
+        </div>
+
+        <!-- KHU VỰC PHÂN LOẠI -->
+        {attributesArray.length > 0 && (
+          <div class="mb-6 space-y-5 pb-6 border-b border-gray-50">
+            {attributesArray.map((attr: any) => (
+              <div class="attribute-group" data-name={attr.name}>
+                <h4 class="text-[12px] font-medium text-gray-800 capitalize mb-2">{attr.name}:</h4>
+                <div class="flex flex-wrap gap-2">
+                  {attr.options.map((opt: string, optIndex: number) => (
+                    <button 
+                      type="button" 
+                      data-value={opt}
+                      class={`attr-btn px-4 py-1.5 text-[13px] font-medium border rounded-sm transition-all min-w-[3.5rem] ${optIndex === 0 ? 'is-active' : ''}`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <!-- KHU VỰC TƯƠNG TÁC -->
+        <div class="flex-grow">
+          {isAffiliate ? (
+            <div class="py-2">
+              <a href={product.affiliate_link || '#'} target="_blank" rel="noopener noreferrer" class="w-full bg-[#E50914] text-white font-oswald uppercase tracking-widest text-[15px] py-4 rounded-lg hover:bg-red-700 transition-colors shadow-lg flex items-center justify-center gap-3">
+                {product.cta_text || 'MUA GIÁ TỐT NHẤT'}
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              </a>
+            </div>
+          ) : (
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-5 shadow-sm">
+              <h3 class="font-oswald uppercase text-[#0D0D0D] tracking-wide mb-4">Thông tin đặt hàng</h3>
+              
+              <form id="order-form" class="space-y-4">
+                <input type="hidden" name="product_id" value={product.id} />
+                <!-- Biến ẩn gửi Tên sản phẩm đi để nội dung Email đẹp hơn -->
+                <input type="hidden" name="product_name" value={product.title} />
+                <input type="hidden" name="selected_attributes" id="input-attributes" value="" />
+                
+                <div>
+                  <label class="block text-[11px] font-medium text-gray-500 uppercase mb-1">Họ và tên *</label>
+                  <input type="text" name="customer_name" required class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-[#2C6B9E] transition-colors" placeholder="Vd: Nguyễn Văn A" />
+                </div>
+                
+                <div>
+                  <label class="block text-[11px] font-medium text-gray-500 uppercase mb-1">Số điện thoại *</label>
+                  <input type="tel" name="customer_phone" required class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-[#2C6B9E] transition-colors" placeholder="Vd: 0912345678" />
+                </div>
+                
+                <div>
+                  <label class="block text-[11px] font-medium text-gray-500 uppercase mb-1">Địa chỉ nhận hàng *</label>
+                  <textarea name="customer_address" required rows="2" class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-[#2C6B9E] transition-colors resize-none" placeholder="Số nhà, Phường, Quận, Thành phố..."></textarea>
+                </div>
+
+                <!-- ĐÃ BỔ SUNG Ô LƯU Ý -->
+                <div>
+                  <label class="block text-[11px] font-medium text-gray-500 uppercase mb-1">Lưu ý thêm (Không bắt buộc)</label>
+                  <textarea name="customer_note" rows="2" class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-[#2C6B9E] transition-colors resize-none" placeholder="Vd: Giao hàng vào buổi sáng, gọi trước khi giao..."></textarea>
+                </div>
+                
+                <button type="submit" id="submit-btn" class="w-full bg-[#2C6B9E] text-white font-oswald uppercase tracking-widest text-sm py-3 rounded-md hover:bg-[#1a4b72] transition-all mt-2 shadow-md flex items-center justify-center gap-2">
+                  Gửi Đơn Đặt Hàng
+                </button>
+                <p class="text-[10px] text-center text-gray-500 mt-2 uppercase tracking-wide">Mình sẽ liên hệ lại qua Zalo/SĐT để xác nhận.</p>
+              </form>
+            </div>
+          )}
+        </div>
+
+        <!-- THÔNG SỐ CƠ BẢN -->
+        <div class="mt-6 pt-6 border-t border-gray-100 text-[13px] text-gray-600 space-y-2">
+          {product.sku && (
+            <p class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-[#2C6B9E]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg> 
+              Mã sản phẩm: <span class="text-[#0D0D0D] font-medium">{product.sku}</span>
+            </p>
+          )}
+          {product.category && (
+            <p class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-[#2C6B9E]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg> 
+              Loại sản phẩm: <span class="text-[#0D0D0D] font-medium capitalize">{product.category}</span>
+            </p>
+          )}
+          {product.weight && (
+            <p class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-[#2C6B9E]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg> 
+              Trọng lượng: <span class="text-[#0D0D0D] font-medium">{product.weight} {product.weight_unit || 'g'}</span>
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+
+    <!-- NỘI DUNG BÀI VIẾT CHI TIẾT -->
+    {contentHtml && (
+      <div class="mt-16 pt-10 border-t border-gray-200">
+        <h2 class="font-oswald uppercase text-xl md:text-[24px] text-[#2C6B9E] tracking-wide mb-8 text-center">Chi Tiết Sản Phẩm</h2>
+        <article class="prose-content max-w-[720px] mx-auto font-sans text-base leading-8 text-neutral-900">
+          <Fragment set:html={contentHtml} />
+        </article>
+      </div>
+    )}
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-6 right-6 transform translate-y-24 opacity-0 transition-all duration-300 z-50 flex items-center gap-4 bg-white border border-gray-100 shadow-2xl rounded-xl p-4 pointer-events-none">
+    <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+      <svg class="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    </div>
+    <div>
+      <h4 class="font-bold text-gray-900 text-sm mb-0.5">Đặt hàng thành công!</h4>
+      <p class="text-xs text-gray-500">Minoxus sẽ liên hệ với bạn sớm nhất.</p>
+    </div>
+  </div>
+
+</MainLayout>
+
+<!-- SCRIPT ĐIỀU KHIỂN & CALL API -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    
+    // 1. ẢNH GALLERY
+    const mainImg = document.getElementById('main-img') as HTMLImageElement | null;
+    const thumbnails = document.querySelectorAll('.gallery-thumb');
+    if (mainImg && thumbnails.length > 0) {
+      thumbnails.forEach(thumb => {
+        thumb.addEventListener('click', (e) => {
+          const target = e.currentTarget as HTMLElement;
+          const newUrl = target.getAttribute('data-url');
+          if (newUrl) {
+            mainImg.style.opacity = '0.5';
+            setTimeout(() => { mainImg.src = newUrl; mainImg.style.opacity = '1'; }, 150);
+          }
+          thumbnails.forEach(t => {
+            t.classList.remove('border-[#2C6B9E]');
+            t.classList.add('border-transparent');
+          });
+          target.classList.remove('border-transparent');
+          target.classList.add('border-[#2C6B9E]');
+        });
+      });
+    }
+
+    // 2. NÚT PHÂN LOẠI (Chắc chắn hoạt động nhờ CSS thuần)
+    const attrGroups = document.querySelectorAll('.attribute-group');
+    const inputAttributes = document.getElementById('input-attributes') as HTMLInputElement | null;
+
+    const updateSelectedAttributes = () => {
+      if (!inputAttributes) return;
+      const selected: string[] = [];
+      attrGroups.forEach(group => {
+        const name = group.getAttribute('data-name');
+        const activeBtn = group.querySelector('.is-active');
+        if (activeBtn) {
+          selected.push(`${name}: ${activeBtn.getAttribute('data-value')}`);
+        }
+      });
+      inputAttributes.value = selected.join(' | ');
+    };
+
+    if (attrGroups.length > 0) {
+      attrGroups.forEach(group => {
+        const btns = group.querySelectorAll('.attr-btn');
+        btns.forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            btns.forEach(b => b.classList.remove('is-active')); // Tắt active cũ
+            const target = e.currentTarget as HTMLElement;
+            target.classList.add('is-active'); // Bật active mới
+            updateSelectedAttributes();
+          });
+        });
+      });
+      updateSelectedAttributes();
+    }
+
+    // 3. GỌI API GỬI EMAIL VÀ LƯU DATABASE
+    const form = document.getElementById('order-form') as HTMLFormElement | null;
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+    const toast = document.getElementById('toast');
+
+    if (form && submitBtn && toast) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault(); 
+        
+        const formData = new FormData(form);
+        const dataToSend = Object.fromEntries(formData);
+        
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = `
+          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          ĐANG XỬ LÝ...
+        `;
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-80', 'cursor-not-allowed');
+
+        try {
+          // GỌI CỔNG API CHECKOUT (Vừa tạo ở Bước 1)
+          const response = await fetch('/api/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dataToSend)
+          });
+          
+          if (response.ok) {
+            toast.classList.remove('translate-y-24', 'opacity-0'); // Hiện thông báo
+            form.reset();
+            updateSelectedAttributes(); // Reset lại màu sắc
+            
+            setTimeout(() => {
+              toast.classList.add('translate-y-24', 'opacity-0'); // Ẩn thông báo sau 4s
+            }, 4000);
+          } else {
+            alert("Đã có lỗi xảy ra. Vui lòng thử lại sau hoặc liên hệ trực tiếp.");
+          }
+        } catch (err) {
+          alert("Lỗi kết nối. Vui lòng kiểm tra lại mạng!");
+        } finally {
+          // Trả nút về trạng thái bình thường
+          submitBtn.innerHTML = originalText;
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('opacity-80', 'cursor-not-allowed');
+        }
+      });
+    }
+  });
+</script>

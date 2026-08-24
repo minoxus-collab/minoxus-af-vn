@@ -1,0 +1,35 @@
+---
+// src/pages/admin/products/[id].astro
+import AdminLayout from '../../../layout/AdminLayout.astro';
+import ProductEditor from '../../../components/admin/ProductEditor';
+import { getProductById } from '../../../logic/product';
+
+// Lấy ID từ URL động
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/admin/products');
+}
+
+// Gọi Database lấy thông tin sản phẩm cũ
+const { data: product, error } = await getProductById(id);
+
+if (error || !product) {
+  return Astro.redirect('/admin/products');
+}
+---
+
+<AdminLayout>
+  <div class="mb-6">
+    <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
+      <a href="/admin/products" class="hover:underline">Sản phẩm</a>
+      <span>/</span>
+      <span class="text-gray-900 font-medium">Chỉnh sửa</span>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900">Chỉnh sửa sản phẩm: <span class="text-blue-600">{product.title}</span></h1>
+    <p class="text-sm text-gray-500 mt-1">Cập nhật thông tin chi tiết, giá cả và hình ảnh sản phẩm.</p>
+  </div>
+
+  <!-- Gọi component React ProductEditor và truyền dữ liệu cũ vào -->
+  <ProductEditor client:load initialData={product} />
+</AdminLayout>

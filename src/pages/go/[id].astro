@@ -1,0 +1,22 @@
+---
+import { getAffiliateById } from '../../logic/affiliate.ts';
+import { recordEvent } from '../../logic/tracking.ts';
+
+const { id } = Astro.params;
+
+if (!id) {
+  return new Response('Not found', { status: 404 });
+}
+
+// Bóc tách { data: link } ra từ response của Supabase để lấy đúng row dữ liệu
+const { data: link, error } = await getAffiliateById(id);
+
+if (error || !link || !link.url) {
+  return new Response('Not found', { status: 404 });
+}
+
+// BẮT BUỘC await ghi tracking trước khi redirect trên môi trường serverless
+await recordEvent({ event_type: 'click_affiliate', affiliate_id: id });
+
+return Astro.redirect(link.url, 302);
+---

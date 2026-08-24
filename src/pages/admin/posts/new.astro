@@ -1,0 +1,187 @@
+---
+// src/pages/admin/posts/new.astro
+import AdminLayout from '../../../layout/AdminLayout.astro';
+import EditorWrapper from '../../../editor/EditorWrapper';
+
+const initialContent = JSON.stringify([{ type: 'text', html: '' }]);
+
+const initialSeoData = JSON.stringify({
+  title: '',
+  slug: '',
+  type: 'pillar',
+  status: 'draft',
+  meta_description: '',
+  generate_toc: false,
+  featured_image: '',
+  og_title: '',
+  focus_keyword: '',
+  canonical_url: ''
+});
+---
+
+<AdminLayout>
+  <form id="create-post-form" class="flex flex-col h-[calc(100vh-2rem)] -mt-2">
+    
+    <div class="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200 shrink-0 rounded-t-xl">
+      <div class="flex items-center space-x-4">
+        <h1 class="text-xl font-bold text-gray-900">Viết bài mới</h1>
+        
+        <div id="save-indicator" class="text-xs font-semibold px-3 py-1 rounded-md text-amber-700 bg-amber-50 border border-amber-200">
+          Chưa lưu
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-3">
+        <a href="/admin/posts" class="text-sm font-medium text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
+          Hủy bỏ
+        </a>
+        
+        <button type="button" id="draft-btn" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm focus:outline-none disabled:opacity-50">
+          Lưu nháp
+        </button>
+        
+        <button type="button" id="publish-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-all shadow-sm focus:outline-none disabled:opacity-50">
+          Xuất bản bài viết
+        </button>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto bg-gray-50 border-x border-b border-gray-200 rounded-b-xl">
+      <EditorWrapper client:only="react" initialContent={initialContent} initialSeoData={initialSeoData} />
+    </div>
+    
+  </form>
+</AdminLayout>
+
+<script>
+  import { createPost } from '../../../logic/post';
+
+  const form = document.getElementById('create-post-form') as HTMLFormElement;
+  const draftBtn = document.getElementById('draft-btn') as HTMLButtonElement;
+  const publishBtn = document.getElementById('publish-btn') as HTMLButtonElement;
+  const saveIndicator = document.getElementById('save-indicator') as HTMLElement;
+
+  let targetStatus = 'draft';
+
+  function updateIndicator(state: 'unsaved' | 'saving' | 'saved' | 'error', timeStr?: string) {
+    if (state === 'unsaved') {
+      saveIndicator.className = "text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md";
+      saveIndicator.textContent = "Chưa lưu";
+    } else if (state === 'saving') {
+      saveIndicator.className = "text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md animate-pulse";
+      saveIndicator.textContent = "Đang lưu...";
+    } else if (state === 'saved') {
+      saveIndicator.className = "text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-md";
+      saveIndicator.textContent = timeStr ? `Đã lưu lúc ${timeStr}` : "Đã lưu bản ghi";
+    } else if (state === 'error') {
+      saveIndicator.className = "text-xs font-medium text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-md";
+      saveIndicator.textContent = "Lưu thất bại";
+    }
+  }
+
+  draftBtn?.addEventListener('click', () => {
+    targetStatus = 'draft';
+    executeCreate();
+  });
+
+  publishBtn?.addEventListener('click', () => {
+    targetStatus = 'published';
+    executeCreate();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      executeCreate();
+    }
+  });
+
+async function executeCreate() {
+    const statusInput = form.querySelector('input[name="status"]') as HTMLInputElement;
+    if (statusInput) {
+      statusInput.value = targetStatus;
+    }
+
+    if (draftBtn) draftBtn.disabled = true;
+    if (publishBtn) publishBtn.disabled = true;
+    updateIndicator('saving');
+
+    try {
+      const formData = new FormData(form);
+      const contentString = formData.get('content') as string;
+      const contentData = contentString ? JSON.parse(contentString) : [];
+
+      const rawTitle = (formData.get('title') as string) || '';
+      let rawSlug = (formData.get('slug') as string) || '';
+
+      if (!rawTitle.trim()) {
+        throw new Error("Vui lòng nhập Tiêu đề bài viết ở cột SEO bên phải!");
+      }
+
+      if (!rawSlug.trim()) {
+        rawSlug = 'post-' + Date.now();
+      }
+
+      const data = {
+        title: rawTitle,
+        slug: rawSlug,
+        type: formData.get('type') as 'pillar' | 'money' | 'support',
+        status: targetStatus as 'draft' | 'published',
+        meta_desc: formData.get('meta_description') as string,
+        content: contentData,
+        generate_toc: formData.get('generate_toc') === 'true',
+        featured_image: formData.get('featured_image') as string,
+        og_title: formData.get('og_title') as string,
+        focus_keyword: formData.get('focus_keyword') as string,
+        canonical_url: formData.get('canonical_url') as string,
+      };
+
+      const res = await createPost(data);
+
+      if (res.error) {
+        if (res.error.code === '23505' || res.error.message?.includes('duplicate key')) {
+          throw new Error(`Đường dẫn tĩnh (slug) "${rawSlug}" đã tồn tại. Vui lòng đổi slug khác.`);
+        }
+        throw new Error(res.error.message || "Lỗi lưu dữ liệu từ Supabase");
+      }
+
+      // --- XỬ LÝ AN TOÀN TUYỆT ĐỐI (Chống lỗi undefined 'id') ---
+      const responseData = res.data;
+      let newPostId = null;
+
+      if (Array.isArray(responseData)) {
+        if (responseData.length > 0) newPostId = responseData[0]?.id;
+      } else if (responseData && typeof responseData === 'object') {
+        newPostId = (responseData as any).id;
+      }
+
+      if (!newPostId) {
+        throw new Error("Không tìm thấy ID bài viết trả về từ cơ sở dữ liệu.");
+      }
+      // ---------------------------------------------------------
+
+      const savedTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      updateIndicator('saved', savedTime);
+      
+      // Chuyển hướng an toàn
+      window.location.href = `/admin/posts/${newPostId}`;
+      
+    } catch (error: any) {
+      console.error('Lỗi khi khởi tạo bài viết:', error);
+      alert(error.message);
+      updateIndicator('error');
+    } finally {
+      if (draftBtn) draftBtn.disabled = false;
+      if (publishBtn) publishBtn.disabled = false;
+    }
+  }
+  // cảnh báo rời đi khi chưa lưu
+  window.addEventListener('beforeunload', (e) => {
+    const indicatorText = saveIndicator?.textContent || '';
+    if (indicatorText.includes('Chưa lưu') || indicatorText.includes('Đang lưu')) {
+      e.preventDefault();
+      e.returnValue = '';
+      return ''; 
+    }
+  });
+</script>

@@ -1,0 +1,34 @@
+---
+import { POST_TYPE_LABELS, POST_TYPE_ROUTES, type PostType } from '../utils/postTaxonomy.ts';
+
+interface Props { 
+  activeType?: PostType | 'all' | ''; 
+}
+const { activeType = 'all' } = Astro.props;
+const types: PostType[] = ['pillar', 'support', 'money'];
+---
+<div class="flex justify-center gap-2 flex-wrap font-oswald pt-8 px-4">
+  <!-- Tab Tất Cả (/posts) -->
+  <a
+    href="/posts"
+    class={`px-5 py-2 rounded-full text-xs uppercase tracking-wide border transition-colors
+      ${activeType === 'all' || !activeType
+        ? 'bg-brand-blue border-brand-blue text-white'
+        : 'border-brand-blue text-brand-blue hover:bg-brand-blue/10'}`}
+  >
+    Tất Cả
+  </a>
+
+  <!-- 3 Tab Danh Mục -->
+  {types.map((t) => (
+    <a
+      href={POST_TYPE_ROUTES[t]}
+      class={`px-5 py-2 rounded-full text-xs uppercase tracking-wide border transition-colors
+        ${t === activeType
+          ? 'bg-brand-blue border-brand-blue text-white'
+          : 'border-brand-blue text-brand-blue hover:bg-brand-blue/10'}`}
+    >
+      {POST_TYPE_LABELS[t]}
+    </a>
+  ))}
+</div>
