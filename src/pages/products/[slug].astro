@@ -70,19 +70,6 @@ if (product.price && product.compare_at_price && product.compare_at_price > prod
 }
 ---
 
-<!-- Bọc CSS Cứng cho nút phân loại để 100% không bị đơ -->
-<style is:global>
-  .attr-btn {
-    border-color: #e5e7eb;
-    color: #4b5563;
-  }
-  .attr-btn.is-active {
-    border-color: #2C6B9E !important;
-    color: #2C6B9E !important;
-    background-color: rgba(44, 107, 158, 0.1) !important;
-  }
-</style>
-
 <MainLayout title={`${product.meta_title || product.title} | Minoxus`} description={product.meta_description}>
   
   <div class="max-w-[1100px] mx-auto px-6 py-10 font-sans">
@@ -147,7 +134,12 @@ if (product.price && product.compare_at_price && product.compare_at_price > prod
                     <button 
                       type="button" 
                       data-value={opt}
-                      class={`attr-btn px-4 py-1.5 text-[13px] font-medium border rounded-sm transition-all min-w-[3.5rem] ${optIndex === 0 ? 'is-active' : ''}`}
+                      data-state={optIndex === 0 ? 'active' : 'inactive'}
+                      class={`attr-btn px-4 py-1.5 text-[13px] font-medium border rounded-sm transition-all min-w-[3.5rem] ${
+                        optIndex === 0 
+                          ? 'border-[#2C6B9E] text-[#2C6B9E] bg-[#2C6B9E]/10' 
+                          : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                      }`}
                     >
                       {opt}
                     </button>
@@ -173,7 +165,6 @@ if (product.price && product.compare_at_price && product.compare_at_price > prod
               
               <form id="order-form" class="space-y-4">
                 <input type="hidden" name="product_id" value={product.id} />
-                <!-- Biến ẩn gửi Tên sản phẩm đi để nội dung Email đẹp hơn -->
                 <input type="hidden" name="product_name" value={product.title} />
                 <input type="hidden" name="selected_attributes" id="input-attributes" value="" />
                 
@@ -192,7 +183,6 @@ if (product.price && product.compare_at_price && product.compare_at_price > prod
                   <textarea name="customer_address" required rows="2" class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-[#2C6B9E] transition-colors resize-none" placeholder="Số nhà, Phường, Quận, Thành phố..."></textarea>
                 </div>
 
-                <!-- ĐÃ BỔ SUNG Ô LƯU Ý -->
                 <div>
                   <label class="block text-[11px] font-medium text-gray-500 uppercase mb-1">Lưu ý thêm (Không bắt buộc)</label>
                   <textarea name="customer_note" rows="2" class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm outline-none focus:border-[#2C6B9E] transition-colors resize-none" placeholder="Vd: Giao hàng vào buổi sáng, gọi trước khi giao..."></textarea>
@@ -249,7 +239,7 @@ if (product.price && product.compare_at_price && product.compare_at_price > prod
     </div>
     <div>
       <h4 class="font-bold text-gray-900 text-sm mb-0.5">Đặt hàng thành công!</h4>
-      <p class="text-xs text-gray-500">Minoxus sẽ liên hệ với bạn sớm nhất.</p>
+      <p class="text-xs text-gray-500">Mình sẽ liên hệ với bạn sớm nhất.</p>
     </div>
   </div>
 
@@ -257,21 +247,24 @@ if (product.price && product.compare_at_price && product.compare_at_price > prod
 
 <!-- SCRIPT ĐIỀU KHIỂN & CALL API -->
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
+  const setupProductPage = () => {
     
     // 1. ẢNH GALLERY
     const mainImg = document.getElementById('main-img') as HTMLImageElement | null;
     const thumbnails = document.querySelectorAll('.gallery-thumb');
     if (mainImg && thumbnails.length > 0) {
       thumbnails.forEach(thumb => {
-        thumb.addEventListener('click', (e) => {
+        const newThumb = thumb.cloneNode(true) as HTMLElement;
+        thumb.parentNode?.replaceChild(newThumb, thumb);
+        
+        newThumb.addEventListener('click', (e) => {
           const target = e.currentTarget as HTMLElement;
           const newUrl = target.getAttribute('data-url');
           if (newUrl) {
             mainImg.style.opacity = '0.5';
             setTimeout(() => { mainImg.src = newUrl; mainImg.style.opacity = '1'; }, 150);
           }
-          thumbnails.forEach(t => {
+          document.querySelectorAll('.gallery-thumb').forEach(t => {
             t.classList.remove('border-[#2C6B9E]');
             t.classList.add('border-transparent');
           });
@@ -281,16 +274,16 @@ if (product.price && product.compare_at_price && product.compare_at_price > prod
       });
     }
 
-    // 2. NÚT PHÂN LOẠI (Chắc chắn hoạt động nhờ CSS thuần)
+    // 2. NÚT PHÂN LOẠI (Màu sắc, Size)
     const attrGroups = document.querySelectorAll('.attribute-group');
     const inputAttributes = document.getElementById('input-attributes') as HTMLInputElement | null;
 
     const updateSelectedAttributes = () => {
       if (!inputAttributes) return;
       const selected: string[] = [];
-      attrGroups.forEach(group => {
+      document.querySelectorAll('.attribute-group').forEach(group => {
         const name = group.getAttribute('data-name');
-        const activeBtn = group.querySelector('.is-active');
+        const activeBtn = group.querySelector('[data-state="active"]');
         if (activeBtn) {
           selected.push(`${name}: ${activeBtn.getAttribute('data-value')}`);
         }
@@ -302,42 +295,53 @@ if (product.price && product.compare_at_price && product.compare_at_price > prod
       attrGroups.forEach(group => {
         const btns = group.querySelectorAll('.attr-btn');
         btns.forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            btns.forEach(b => b.classList.remove('is-active')); // Tắt active cũ
+          const newBtn = btn.cloneNode(true) as HTMLElement;
+          btn.parentNode?.replaceChild(newBtn, btn);
+
+          newBtn.addEventListener('click', (e) => {
+            // Tắt màu tất cả các nút trong nhóm
+            group.querySelectorAll('.attr-btn').forEach(b => {
+              b.setAttribute('data-state', 'inactive');
+              b.classList.remove('border-[#2C6B9E]', 'text-[#2C6B9E]', 'bg-[#2C6B9E]/10');
+              b.classList.add('border-gray-300', 'text-gray-600', 'hover:border-gray-400');
+            });
+
+            // Bật màu cho nút vừa được bấm
             const target = e.currentTarget as HTMLElement;
-            target.classList.add('is-active'); // Bật active mới
+            target.setAttribute('data-state', 'active');
+            target.classList.remove('border-gray-300', 'text-gray-600', 'hover:border-gray-400');
+            target.classList.add('border-[#2C6B9E]', 'text-[#2C6B9E]', 'bg-[#2C6B9E]/10');
+
             updateSelectedAttributes();
           });
         });
       });
+      // Cập nhật giá trị ngay khi vừa load trang
       updateSelectedAttributes();
     }
 
-    // 3. GỌI API GỬI EMAIL VÀ LƯU DATABASE
+    // 3. FORM GỬI EMAIL
     const form = document.getElementById('order-form') as HTMLFormElement | null;
-    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
     const toast = document.getElementById('toast');
 
-    if (form && submitBtn && toast) {
-      form.addEventListener('submit', async (e) => {
+    if (form && toast) {
+      const newForm = form.cloneNode(true) as HTMLFormElement;
+      form.parentNode?.replaceChild(newForm, form);
+
+      newForm.addEventListener('submit', async (e) => {
         e.preventDefault(); 
+        const submitBtn = newForm.querySelector('#submit-btn') as HTMLButtonElement | null;
+        if(!submitBtn) return;
         
-        const formData = new FormData(form);
+        const formData = new FormData(newForm);
         const dataToSend = Object.fromEntries(formData);
         
         const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = `
-          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          ĐANG XỬ LÝ...
-        `;
+        submitBtn.innerHTML = `ĐANG XỬ LÝ...`;
         submitBtn.disabled = true;
         submitBtn.classList.add('opacity-80', 'cursor-not-allowed');
 
         try {
-          // GỌI CỔNG API CHECKOUT (Vừa tạo ở Bước 1)
           const response = await fetch('/api/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -345,25 +349,28 @@ if (product.price && product.compare_at_price && product.compare_at_price > prod
           });
           
           if (response.ok) {
-            toast.classList.remove('translate-y-24', 'opacity-0'); // Hiện thông báo
-            form.reset();
-            updateSelectedAttributes(); // Reset lại màu sắc
-            
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            newForm.reset();
+            updateSelectedAttributes(); // reset lại hidden input
             setTimeout(() => {
-              toast.classList.add('translate-y-24', 'opacity-0'); // Ẩn thông báo sau 4s
+              toast.classList.add('translate-y-24', 'opacity-0');
             }, 4000);
           } else {
-            alert("Đã có lỗi xảy ra. Vui lòng thử lại sau hoặc liên hệ trực tiếp.");
+            alert("Đã có lỗi xảy ra. Vui lòng thử lại sau.");
           }
         } catch (err) {
-          alert("Lỗi kết nối. Vui lòng kiểm tra lại mạng!");
+          alert("Lỗi kết nối mạng!");
         } finally {
-          // Trả nút về trạng thái bình thường
           submitBtn.innerHTML = originalText;
           submitBtn.disabled = false;
           submitBtn.classList.remove('opacity-80', 'cursor-not-allowed');
         }
       });
     }
-  });
+  };
+
+  // Khởi chạy khi Astro đổi trang (View Transitions)
+  document.addEventListener('astro:page-load', setupProductPage);
+  // Khởi chạy lần đầu tiên
+  setupProductPage();
 </script>
