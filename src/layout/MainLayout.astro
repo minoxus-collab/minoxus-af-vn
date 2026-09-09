@@ -134,17 +134,26 @@ const isPost = currentPath.startsWith('/posts') ||
     </div>
   </footer>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const hamburgerBtn = document.getElementById('hamburger-btn');
-      const mobileMenu = document.getElementById('mobile-menu');
-      if (hamburgerBtn && mobileMenu) {
-        hamburgerBtn.addEventListener('click', () => {
-          mobileMenu.classList.toggle('hidden');
-          mobileMenu.classList.toggle('flex');
-        });
-      }
-    });
-  </script>
+<script>
+  function setupMobileMenu() {
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    
+    // Kiểm tra xem phần tử đã tồn tại chưa để tránh lỗi null
+    if (hamburgerBtn && mobileMenu) {
+      // Dùng cờ để tránh gán nhiều lần sự kiện nếu DOM load lại
+      hamburgerBtn.onclick = () => {
+        mobileMenu.classList.toggle('hidden');
+        mobileMenu.classList.toggle('flex');
+      };
+    }
+  }
+
+  // Chạy lần đầu khi tải trang
+  setupMobileMenu();
+
+  // Hỗ trợ trường hợp chuyển trang ngầm trong Astro
+  document.addEventListener('astro:after-swap', setupMobileMenu);
+</script>
 </body>
 </html>
