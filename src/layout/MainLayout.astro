@@ -18,6 +18,9 @@ const isPost = currentPath.startsWith('/posts') ||
                currentPath.startsWith('/guides') || 
                currentPath.startsWith('/insights') || 
                currentPath.startsWith('/picks');
+
+// 1. Thêm biến nhận diện khi người dùng đang ở trong khu vực App
+const isApp = currentPath.startsWith('/app');
 ---
 
 <!DOCTYPE html>
@@ -59,16 +62,20 @@ const isPost = currentPath.startsWith('/posts') ||
           </button>
         </div>
 
-        <!-- Desktop Nav (Tự động Active theo trang) -->
+        <!-- Desktop Nav -->
         <nav class="hidden md:flex gap-10 items-center">
           <a href="/posts" class={isPost 
             ? "font-medium text-[14px] text-[#2C6B9E] uppercase tracking-[0.15em] relative after:content-[''] after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-[#2C6B9E] after:rounded-full" 
             : "font-light text-[14px] text-gray-500 hover:text-[#2C6B9E] transition-colors uppercase tracking-[0.15em]"}>BÀI VIẾT</a>
           
-          <!-- Nút Sản Phẩm đã được update logic active -->
           <a href="/products" class={isProduct 
             ? "font-medium text-[14px] text-[#2C6B9E] uppercase tracking-[0.15em] relative after:content-[''] after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-[#2C6B9E] after:rounded-full" 
             : "font-light text-[14px] text-gray-500 hover:text-[#2C6B9E] transition-colors uppercase tracking-[0.15em]"}>SẢN PHẨM</a>
+            
+          <!-- 2. Thêm nút APP vào Desktop Nav -->
+          <a href="/app" class={isApp 
+            ? "font-medium text-[14px] text-[#2C6B9E] uppercase tracking-[0.15em] relative after:content-[''] after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-[#2C6B9E] after:rounded-full" 
+            : "font-light text-[14px] text-gray-500 hover:text-[#2C6B9E] transition-colors uppercase tracking-[0.15em]"}>APP</a>
           
           <a href="/" class={isHome 
             ? "font-medium text-[14px] text-[#2C6B9E] uppercase tracking-[0.15em] relative after:content-[''] after:absolute after:-bottom-2 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-[#2C6B9E] after:rounded-full" 
@@ -89,6 +96,9 @@ const isPost = currentPath.startsWith('/posts') ||
       <a href="/posts" class={`py-4 text-sm uppercase border-b border-gray-50 tracking-[0.2em] text-center ${isPost ? 'font-medium text-[#2C6B9E]' : 'font-light text-gray-600'}`}>BÀI VIẾT</a>
       
       <a href="/products" class={`py-4 text-sm uppercase border-b border-gray-50 tracking-[0.2em] text-center ${isProduct ? 'font-medium text-[#2C6B9E]' : 'font-light text-gray-600'}`}>SẢN PHẨM</a>
+      
+      <!-- 3. Thêm nút APP vào Mobile Menu -->
+      <a href="/app" class={`py-4 text-sm uppercase border-b border-gray-50 tracking-[0.2em] text-center ${isApp ? 'font-medium text-[#2C6B9E]' : 'font-light text-gray-600'}`}>APP</a>
       
       <a href="/" class={`py-4 text-sm uppercase tracking-[0.2em] text-center ${isHome ? 'font-medium text-[#2C6B9E]' : 'font-light text-gray-600'}`}>TRANG CHỦ</a>
     </div>

@@ -1,0 +1,79 @@
+---
+// src/pages/app/index.astro
+import MainLayout from '../../layout/MainLayout.astro';
+
+// DANH SÁCH APP ADMIN (Chỉ chứa App Note như yêu cầu)
+const adminApps = [
+  {
+    name: 'Minox Note',
+    href: '/app/note',
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>`
+  }
+];
+
+// DANH SÁCH APP FREE (Dành cho khách)
+const freeApps = [
+  // Nếu có các app cũ, bạn giữ nguyên ở trên
+  {
+    name: 'AR Drawing',
+    href: '/app/ar-drawing',
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>`
+  }
+];
+
+
+---
+
+<MainLayout title="App Hub | Minoxus">
+  <div class="max-w-[1100px] mx-auto px-6 py-12 md:py-20 min-h-[70vh]">
+    
+    <!-- Tiêu đề trang -->
+    <div class="mb-14 border-b border-gray-200 pb-6">
+      <h1 class="text-3xl md:text-4xl font-bold text-[#0D0D0D] uppercase tracking-widest mb-3">App Hub</h1>
+      <p class="text-sm text-gray-500 font-light tracking-wider uppercase">Trung tâm công cụ và tiện ích mở rộng của hệ thống Minoxus.</p>
+    </div>
+
+    <!-- HÀNG 1: APP QUẢN TRỊ (ADMIN) -->
+    <div>
+      <h2 class="text-[11px] font-bold text-red-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+        Không Gian Quản Trị
+      </h2>
+      
+      <!-- Lưới App: Hiển thị dạng ô vuông gọn gàng -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-5">
+        {adminApps.map(app => (
+          <a href={app.href} class="group flex flex-col items-center justify-center p-5 border border-gray-100 bg-white rounded-2xl hover:shadow-xl hover:border-red-300 transition-all duration-300">
+            <div class="w-16 h-16 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-red-600 group-hover:text-white transition-all shadow-sm">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" set:html={app.icon}></svg>
+            </div>
+            <span class="text-[12px] font-bold uppercase tracking-widest text-[#0D0D0D] group-hover:text-red-600 transition-colors text-center">{app.name}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+
+    <!-- GẠCH NGANG PHÂN CÁCH -->
+    <hr class="border-gray-200 my-12 border-dashed" />
+
+    <!-- HÀNG 2: APP MIỄN PHÍ (FREE) -->
+    <div>
+      <h2 class="text-[11px] font-bold text-green-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        Tiện Ích Công Khai
+      </h2>
+      
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-5">
+        {freeApps.map(app => (
+          <a href={app.href} class="group flex flex-col items-center justify-center p-5 border border-gray-100 bg-white rounded-2xl hover:shadow-xl hover:border-green-300 transition-all duration-300">
+            <div class="w-16 h-16 bg-green-50 text-green-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-green-600 group-hover:text-white transition-all shadow-sm">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" set:html={app.icon}></svg>
+            </div>
+            <span class="text-[12px] font-bold uppercase tracking-widest text-[#0D0D0D] group-hover:text-green-600 transition-colors text-center">{app.name}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+
+  </div>
+</MainLayout>

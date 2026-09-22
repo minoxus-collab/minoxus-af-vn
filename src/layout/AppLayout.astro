@@ -1,0 +1,80 @@
+---
+// src/layout/AppLayout.astro
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>{title}</title>
+  
+  <!-- Ẩn App khỏi các công cụ tìm kiếm -->
+  <meta name="robots" content="noindex, nofollow" />
+  
+  <!-- Preload file font nội bộ -->
+  <link rel="preload" href="/fonts/Roboto-Regular.ttf" as="font" type="font/ttf" crossorigin />
+  <link rel="preload" href="/fonts/Roboto-Medium.ttf" as="font" type="font/ttf" crossorigin />
+  
+  <slot name="head" />
+</head>
+<!-- Đổi font-oswald thành font-roboto -->
+<body class="font-roboto antialiased bg-gray-50 text-black h-[100dvh] w-screen overflow-hidden flex flex-col">
+  
+  <!-- App Header: Xóa hidden md:flex, đổi thành flex để luôn hiển thị -->
+  <header class="flex bg-white border-b border-gray-200 h-14 flex-shrink-0 items-center justify-between px-4 z-50">
+    <div class="flex items-center gap-3">
+      <!-- Avatar/Logo App -->
+      <div class="w-8 h-8 bg-[#2C6B9E] rounded-md flex items-center justify-center text-white font-bold text-sm shadow-sm">
+        N
+      </div>
+      <div>
+        <h1 class="text-[14px] font-medium text-[#0D0D0D] tracking-widest uppercase">Minox Note</h1>
+        <p class="text-[10px] text-gray-500 font-light tracking-wider uppercase">Quản lý dự án & Ghi chú</p>
+      </div>
+    </div>
+    
+    <!-- Nút thoát về trang tĩnh -->
+    <a href="/" class="text-[12px] font-medium text-gray-400 hover:text-[#2C6B9E] uppercase tracking-widest transition-colors flex items-center gap-1">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+      Trở lại Web
+    </a>
+  </header>
+
+  <!-- Khu vực chứa App React -->
+  <main class="flex-1 w-full flex overflow-hidden relative">
+    <slot />
+  </main>
+
+</body>
+</html>
+
+<!-- Định nghĩa CSS nội bộ đọc thẳng từ file máy chủ -->
+<style is:global>
+  @font-face {
+    font-family: 'RobotoLocal';
+    src: url('/fonts/Roboto-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'RobotoLocal';
+    src: url('/fonts/Roboto-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  .font-roboto {
+    font-family: 'RobotoLocal', system-ui, -apple-system, sans-serif;
+  }
+</style>

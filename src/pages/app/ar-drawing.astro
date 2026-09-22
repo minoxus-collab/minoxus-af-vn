@@ -1,0 +1,806 @@
+---
+// Không import bất kỳ Layout nào để giao diện độc lập 100%
+---
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AR Tracing - Vanilla JS</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- Sử dụng is:global để CSS áp dụng chính xác cho toàn trang -->
+    <style is:global>
+        :root {
+            --accent-cyan: #00B4FF;
+            --accent-green: #00FF00;
+            --bg-dark: #000000;
+            --bg-panel: rgba(20, 20, 20, 0.85);
+            --text-color: #FFFFFF;
+            --font-main: 'Archivo Narrow', sans-serif;
+            --safe-bottom: env(safe-area-inset-bottom, 20px);
+            --safe-top: env(safe-area-inset-top, 20px);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+        
+        body, html {
+            width: 100%; height: 100%;
+            background-color: var(--bg-dark);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            overflow: hidden;
+            overscroll-behavior: none;
+        }
+
+        #intro-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: var(--bg-dark); z-index: 9999; transition: opacity 0.3s;
+        }
+        #intro-screen h1 { font-size: 2.5rem; margin-bottom: 30px; letter-spacing: 2px; color: var(--accent-cyan); }
+        .btn-large {
+            position: relative; overflow: hidden;
+            background: transparent; border: 2px solid var(--accent-cyan);
+            color: var(--accent-cyan); font-size: 1.2rem; font-family: var(--font-main);
+            padding: 15px 40px; border-radius: 30px; cursor: pointer; text-transform: uppercase;
+        }
+        .btn-large input[type="file"] {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0; cursor: pointer;
+        }
+
+        #app-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;
+        }
+        #camera-view {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; z-index: 1;
+        }
+        #workspace {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2; touch-action: none; overflow: hidden;
+        }
+        
+        .layer {
+            position: absolute; top: 50%; left: 50%;
+            transform-origin: center center;
+            will-change: transform;
+        }
+        #image-layer img {
+            display: block; max-width: 80vw; max-height: 80vh; pointer-events: none;
+            transition: filter 0.2s, opacity 0.2s;
+        }
+        #grid-layer svg {
+            display: block; overflow: visible; pointer-events: none;
+        }
+        .grid-outline { fill: none; stroke: rgba(255, 255, 255, 0.5); stroke-width: 2; transition: all 0.3s; }
+        .grid-lines { fill: none; stroke: rgba(255, 255, 255, 0.3); stroke-width: 1; transition: opacity 0.3s; }
+
+        body.locked .grid-outline { stroke: var(--accent-green); stroke-width: 4; filter: drop-shadow(0 0 8px var(--accent-green)); }
+        body.locked .grid-lines { opacity: 0; }
+        
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; transition: opacity 0.3s; }
+        #ui-layer.hidden { opacity: 0; pointer-events: none !important; }
+        
+        .interactive-ui { pointer-events: auto; }
+
+        #btn-eye {
+            position: absolute; top: var(--safe-top); right: 20px;
+            width: 44px; height: 44px; background: rgba(0,0,0,0.5); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); cursor: pointer;
+        }
+        body.ui-hidden #btn-eye { opacity: 0.3; pointer-events: auto !important; z-index: 20; }
+        body.ui-hidden #ui-layer:not(#btn-eye-container) > *:not(#btn-eye) { display: none !important; }
+        
+        #btn-unlock {
+            position: absolute; top: var(--safe-top); left: 50%; transform: translateX(-50%);
+            padding: 10px 20px; background: var(--bg-panel); border: 2px solid var(--accent-green);
+            color: var(--accent-green); border-radius: 25px; display: none; align-items: center; gap: 8px;
+            font-weight: 600; text-transform: uppercase; z-index: 20; pointer-events: auto;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        }
+        body.locked #btn-unlock { display: flex; }
+        body.locked #btn-eye { display: none; }
+
+        #bottom-ui {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        #target-selector {
+            display: flex; background: var(--bg-panel); border-radius: 25px; padding: 4px; margin-bottom: 15px;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+        }
+        .target-btn {
+            padding: 10px 20px; color: #888; font-family: var(--font-main); font-size: 0.9rem;
+            background: transparent; border: none; border-radius: 20px; cursor: pointer; transition: all 0.2s;
+        }
+        .target-btn.active { background: rgba(255,255,255,0.1); color: var(--accent-cyan); font-weight: 600; }
+
+        #panels-container {
+            width: 100%; position: relative; height: 0; display: flex; justify-content: center;
+        }
+        .panel {
+            position: absolute; bottom: 0; width: 95%; max-width: 400px;
+            background: var(--bg-panel); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border-radius: 20px 20px 0 0; border: 1px solid rgba(255,255,255,0.1); border-bottom: none;
+            padding: 20px; padding-bottom: calc(70px + var(--safe-bottom)); 
+            transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.1, 0.9, 0.2, 1);
+            visibility: hidden; display: flex; flex-direction: column; gap: 15px;
+        }
+        .panel.open { transform: translateY(0); visibility: visible; }
+
+        #tab-bar {
+            width: 100%; height: calc(60px + var(--safe-bottom)); padding-bottom: var(--safe-bottom);
+            background: rgba(10, 10, 10, 0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-around; align-items: center;
+            z-index: 12;
+        }
+        .tab-btn {
+            width: 60px; height: 60px; display: flex; justify-content: center; align-items: center;
+            background: transparent; border: none; color: #888; cursor: pointer; transition: all 0.2s;
+        }
+        .tab-btn svg { width: 26px; height: 26px; fill: currentColor; }
+        .tab-btn.active { color: var(--accent-cyan); filter: drop-shadow(0 0 5px rgba(0, 180, 255, 0.5)); }
+        #btn-lock { color: #555; }
+        #btn-lock svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;}
+        #btn-lock:active { color: var(--accent-green); }
+
+        .icon-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; }
+        .icon-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+            padding: 10px; flex: 1 1 20%; min-width: 60px; cursor: pointer; color: #CCC; font-size: 0.75rem;
+        }
+        .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
+        .icon-btn:active, .icon-btn.active { background: rgba(0, 180, 255, 0.15); border-color: var(--accent-cyan); color: var(--accent-cyan); }
+        .icon-btn.danger:active { background: rgba(255, 0, 0, 0.15); border-color: #ff4444; color: #ff4444; }
+        
+        .slider-group { display: flex; flex-direction: column; gap: 5px; }
+        .slider-group label { font-size: 0.85rem; color: #AAA; display: flex; justify-content: space-between; }
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent; height: 30px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
+            background: var(--accent-cyan); cursor: pointer; margin-top: -8px; box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.2); border-radius: 2px;
+        }
+        
+        .paper-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .paper-btn {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            padding: 10px 5px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;
+        }
+        .paper-btn .shape { border: 1px solid #888; border-radius: 2px; }
+        .shape.a-v { width: 18px; height: 25px; } 
+        .shape.a-h { width: 25px; height: 18px; }
+        .paper-btn span { font-size: 0.75rem; color: #AAA; }
+        .paper-btn.active { border-color: var(--accent-cyan); background: rgba(0,180,255,0.1); }
+        .paper-btn.active .shape { border-color: var(--accent-cyan); }
+        .paper-btn.active span { color: var(--accent-cyan); }
+
+        .target-active-glow { filter: drop-shadow(0 0 5px var(--accent-cyan)); }
+        
+        #hidden-file-input { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="intro-screen">
+        <h1>AR TRACING</h1>
+        <div class="btn-large">
+            <span>Chọn ảnh mẫu</span>
+            <input type="file" id="init-file-input" accept="image/*">
+        </div>
+        <p style="margin-top:20px; color:#666; font-size: 0.9rem; text-align:center; padding: 0 20px;">
+            Mẹo: Cấp quyền Camera khi được hỏi.<br>Đặt điện thoại lên giá đỡ cao để chiếu ảnh xuống bàn.
+        </p>
+    </div>
+
+    <div id="app-container">
+        <video id="camera-view" autoplay playsinline webkit-playsinline muted></video>
+        
+        <div id="workspace">
+            <div id="grid-layer" class="layer target-active-glow"></div>
+            <div id="image-layer" class="layer">
+                <img id="trace-image" src="" alt="Mẫu">
+            </div>
+        </div>
+
+        <div id="ui-layer">
+            <div id="btn-eye" class="interactive-ui">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+            </div>
+
+            <button id="btn-unlock" class="interactive-ui">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                MỞ KHÓA
+            </button>
+
+            <div id="bottom-ui">
+                <div id="target-selector" class="interactive-ui">
+                    <button class="target-btn" data-target="image">Ảnh</button>
+                    <button class="target-btn active" data-target="grid">Lưới</button>
+                    <button class="target-btn" data-target="both">Cả hai</button>
+                </div>
+
+                <div id="panels-container" class="interactive-ui">
+                    <div id="panel-image" class="panel">
+                        <div class="icon-row">
+                            <div class="icon-btn" onclick="app.actionCenter('image')">
+                                <svg viewBox="0 0 24 24"><path d="M12 2L12 22M2 12L22 12M5 5L19 19M19 5L5 19" stroke="currentColor" stroke-width="2"/></svg>
+                                <span>Về giữa</span>
+                            </div>
+                            <div class="icon-btn" onclick="app.actionFlip('image', 'H')">
+                                <svg viewBox="0 0 24 24"><path d="M12 2v20M8 6l-6 6 6 6V6zM16 18l6-6-6-6v12z" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                                <span>Lật ngang</span>
+                            </div>
+                            <div class="icon-btn" onclick="app.actionFlip('image', 'V')">
+                                <svg viewBox="0 0 24 24"><path d="M2 12h20M6 8l6-6 6 6H6zM18 16l-6 6-6-6h12z" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                                <span>Lật dọc</span>
+                            </div>
+                            <div class="icon-btn" onclick="app.actionRotate90('image')">
+                                <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-9-9c2.5 0 4.8 1 6.5 2.5L21 8M21 3v5h-5" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                                <span>Xoay 90°</span>
+                            </div>
+                            <label class="icon-btn" style="position:relative;">
+                                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                                <span>Đổi ảnh</span>
+                                <input type="file" id="hidden-file-input" accept="image/*">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="panel-grid" class="panel">
+                        <div style="font-size: 0.9rem; color: var(--accent-cyan); text-align: center; margin-bottom: 5px;">Mật độ ô mặc định: 1cm</div>
+                        <div class="paper-grid">
+                            <div class="paper-btn" data-paper="A3-V"><div class="shape a-v"></div><span>A3 Dọc</span></div>
+                            <div class="paper-btn" data-paper="A4-V"><div class="shape a-v"></div><span>A4 Dọc</span></div>
+                            <div class="paper-btn" data-paper="A5-V"><div class="shape a-v"></div><span>A5 Dọc</span></div>
+                            <div class="paper-btn" data-paper="A3-H"><div class="shape a-h"></div><span>A3 Ngang</span></div>
+                            <div class="paper-btn" data-paper="A4-H"><div class="shape a-h"></div><span>A4 Ngang</span></div>
+                            <div class="paper-btn" data-paper="A5-H"><div class="shape a-h"></div><span>A5 Ngang</span></div>
+                        </div>
+                        <div class="icon-row" style="justify-content: center; margin-top: 10px;">
+                            <div class="icon-btn danger" onclick="app.setGridOff()">
+                                <svg viewBox="0 0 24 24"><path d="M3 3l18 18M4 4h16v16H4V4z" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                                <span>Tắt Lưới</span>
+                            </div>
+                            <div class="icon-btn" onclick="app.actionCenter('grid')">
+                                <svg viewBox="0 0 24 24"><path d="M12 2L12 22M2 12L22 12M5 5L19 19M19 5L5 19" stroke="currentColor" stroke-width="2"/></svg>
+                                <span>Về giữa lưới</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="panel-display" class="panel">
+                        <div class="slider-group">
+                            <label>Độ mờ ảnh <span id="val-opacity">100%</span></label>
+                            <input type="range" id="sl-opacity" min="0" max="100" value="100">
+                        </div>
+                        <div class="slider-group">
+                            <label>Tương phản <span id="val-contrast">100%</span></label>
+                            <input type="range" id="sl-contrast" min="50" max="200" value="100">
+                        </div>
+                        
+                        <div class="icon-row">
+                            <div class="icon-btn" id="btn-bw">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 2a10 10 0 0 0 0 20z" fill="currentColor"/></svg>
+                                <span>Trắng Đen</span>
+                            </div>
+                            <div class="icon-btn" id="btn-invert">
+                                <svg viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 2L2 22h10V2z" fill="currentColor"/></svg>
+                                <span>Đảo Màu</span>
+                            </div>
+                            <div class="icon-btn" id="btn-edge">
+                                <svg viewBox="0 0 24 24"><path d="M3 3h18v18H3V3z" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                                <span>Tách Nét</span>
+                            </div>
+                        </div>
+
+                        <div class="slider-group" id="wrap-edge-thresh" style="display:none; margin-top: 10px;">
+                            <label>Ngưỡng Tách Nét (Đậm/Nhạt) <span id="val-thresh">100%</span></label>
+                            <input type="range" id="sl-thresh" min="20" max="300" value="100">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-bar" class="interactive-ui">
+                    <button class="tab-btn" data-tab="image">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke="none"/><circle cx="8.5" cy="8.5" r="1.5" fill="#000"/><path d="M21 15l-5-5L5 21" stroke="#000" stroke-width="2" fill="none"/></svg>
+                    </button>
+                    <button class="tab-btn" data-tab="grid">
+                        <svg viewBox="0 0 24 24"><path d="M3 3h18v18H3V3zM9 3v18M15 3v18M3 9h18M3 15h18" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                    </button>
+                    <button class="tab-btn" data-tab="display">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2"/></svg>
+                    </button>
+                    <button class="tab-btn" id="btn-lock">
+                        <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" ry="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sử dụng is:inline để Astro giữ nguyên module JS không bao bọc -->
+    <script is:inline>
+        const DOM = {
+            intro: document.getElementById('intro-screen'),
+            app: document.getElementById('app-container'),
+            video: document.getElementById('camera-view'),
+            workspace: document.getElementById('workspace'),
+            imgLayer: document.getElementById('image-layer'),
+            imgEl: document.getElementById('trace-image'),
+            gridLayer: document.getElementById('grid-layer'),
+            targetBtns: document.querySelectorAll('.target-btn'),
+            panels: document.querySelectorAll('.panel'),
+            tabBtns: document.querySelectorAll('.tab-btn[data-tab]'),
+            btnLock: document.getElementById('btn-lock'),
+            btnUnlock: document.getElementById('btn-unlock'),
+            btnEye: document.getElementById('btn-eye'),
+            paperBtns: document.querySelectorAll('.paper-btn')
+        };
+
+        let wakeLock = null;
+
+        const SETTINGS_KEY = 'AR_TRACING_SETTINGS';
+        const displaySettings = {
+            paper: 'A4-V',
+            opacity: 100,
+            contrast: 100,
+            bw: false,
+            invert: false,
+            edge: false,
+            thresh: 100
+        };
+
+        const transforms = {
+            image: { x: 0, y: 0, scale: 1, rotation: 0, flipH: 1, flipV: 1, el: DOM.imgLayer },
+            grid:  { x: 0, y: 0, scale: 1, rotation: 0, flipH: 1, flipV: 1, el: DOM.gridLayer }
+        };
+
+        let currentTarget = 'grid'; 
+        let isLocked = false;
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: 'environment' } },
+                    audio: false
+                });
+                DOM.video.srcObject = stream;
+            } catch (err) {
+                alert("Lỗi Camera: Không thể truy cập. Hãy chắc chắn bạn đang dùng HTTPS và đã cấp quyền cho Safari.");
+                console.error(err);
+            }
+        }
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.log('Wake Lock bị từ chối:', err);
+                }
+            }
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                requestWakeLock();
+            }
+        });
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                DOM.imgEl.src = event.target.result;
+                DOM.intro.style.opacity = 0;
+                setTimeout(() => {
+                    DOM.intro.style.display = 'none';
+                    DOM.app.style.display = 'block';
+                    startCamera();
+                    requestWakeLock();
+                    app.applyDisplaySettings();
+                    app.renderGrid();
+                }, 300);
+            };
+            reader.readAsDataURL(file);
+            e.target.value = ''; 
+        }
+        document.getElementById('init-file-input').addEventListener('change', handleFileSelect);
+        document.getElementById('hidden-file-input').addEventListener('change', handleFileSelect);
+
+        const PAPER_SIZES = {
+            'A3': { w: 420, h: 297 },
+            'A4': { w: 297, h: 210 },
+            'A5': { w: 210, h: 148 }
+        };
+
+        const app = {
+            renderGrid: () => {
+                if(displaySettings.paper === 'OFF') {
+                    DOM.gridLayer.innerHTML = '';
+                    return;
+                }
+                const parts = displaySettings.paper.split('-');
+                const sizeInfo = PAPER_SIZES[parts[0]];
+                let w_mm = sizeInfo.w;
+                let h_mm = sizeInfo.h;
+                if (parts[1] === 'V') { 
+                    w_mm = sizeInfo.h;
+                    h_mm = sizeInfo.w;
+                }
+
+                let svg = `<svg viewBox="0 0 ${w_mm} ${h_mm}" width="${w_mm * 3.78}px" height="${h_mm * 3.78}px">`;
+                
+                svg += `<rect x="0" y="0" width="${w_mm}" height="${h_mm}" class="grid-outline" />`;
+                
+                let paths = '';
+                for (let x = 10; x < w_mm; x += 10) paths += `M${x} 0 L${x} ${h_mm} `;
+                for (let y = 10; y < h_mm; y += 10) paths += `M0 ${y} L${w_mm} ${y} `;
+                
+                if (paths !== '') {
+                    svg += `<path d="${paths}" class="grid-lines" />`;
+                }
+                svg += `</svg>`;
+                
+                DOM.gridLayer.innerHTML = svg;
+                const svgEl = DOM.gridLayer.querySelector('svg');
+                svgEl.style.transform = `translate(-50%, -50%)`;
+            },
+            setGridOff: () => {
+                displaySettings.paper = 'OFF';
+                app.saveSettings();
+                app.updateUIStates();
+                app.renderGrid();
+            },
+
+            actionCenter: (type) => {
+                transforms[type].x = 0;
+                transforms[type].y = 0;
+                updateElementTransform(transforms[type]);
+            },
+            actionFlip: (type, axis) => {
+                if(axis === 'H') transforms[type].flipH *= -1;
+                if(axis === 'V') transforms[type].flipV *= -1;
+                updateElementTransform(transforms[type]);
+            },
+            actionRotate90: (type) => {
+                transforms[type].rotation += 90;
+                updateElementTransform(transforms[type]);
+            },
+
+            applyDisplaySettings: () => {
+                let filterStr = [];
+                let mixBlend = 'normal';
+
+                DOM.imgEl.style.opacity = displaySettings.opacity / 100;
+
+                if (displaySettings.edge) {
+                    filterStr.push(`grayscale(100%)`);
+                    filterStr.push(`contrast(${displaySettings.thresh}%)`);
+                    filterStr.push(`brightness(${displaySettings.thresh > 100 ? 100 + (displaySettings.thresh-100)*0.5 : displaySettings.thresh}%)`);
+                    mixBlend = 'multiply';
+                } else {
+                    if (displaySettings.bw) filterStr.push(`grayscale(100%)`);
+                    if (displaySettings.invert) filterStr.push(`invert(100%)`);
+                    if (displaySettings.contrast !== 100) filterStr.push(`contrast(${displaySettings.contrast}%)`);
+                }
+
+                DOM.imgEl.style.filter = filterStr.length > 0 ? filterStr.join(' ') : 'none';
+                DOM.imgLayer.style.mixBlendMode = mixBlend;
+                
+                app.saveSettings();
+            },
+            saveSettings: () => {
+                localStorage.setItem(SETTINGS_KEY, JSON.stringify(displaySettings));
+            },
+            loadSettings: () => {
+                const saved = localStorage.getItem(SETTINGS_KEY);
+                if (saved) {
+                    Object.assign(displaySettings, JSON.parse(saved));
+                }
+                app.updateUIStates();
+            },
+            updateUIStates: () => {
+                document.getElementById('sl-opacity').value = displaySettings.opacity;
+                document.getElementById('val-opacity').textContent = displaySettings.opacity + '%';
+                document.getElementById('sl-contrast').value = displaySettings.contrast;
+                document.getElementById('val-contrast').textContent = displaySettings.contrast + '%';
+                document.getElementById('sl-thresh').value = displaySettings.thresh;
+                document.getElementById('val-thresh').textContent = displaySettings.thresh + '%';
+
+                document.getElementById('btn-bw').classList.toggle('active', displaySettings.bw);
+                document.getElementById('btn-invert').classList.toggle('active', displaySettings.invert);
+                document.getElementById('btn-edge').classList.toggle('active', displaySettings.edge);
+                
+                document.getElementById('wrap-edge-thresh').style.display = displaySettings.edge ? 'flex' : 'none';
+
+                DOM.paperBtns.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.paper === displaySettings.paper);
+                });
+            }
+        };
+
+        app.loadSettings();
+
+        let activeTab = null;
+        DOM.tabBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tab = btn.dataset.tab;
+                if (activeTab === tab) {
+                    closeAllPanels();
+                } else {
+                    closeAllPanels();
+                    activeTab = tab;
+                    btn.classList.add('active');
+                    document.getElementById('panel-' + tab).classList.add('open');
+                }
+            });
+        });
+
+        function closeAllPanels() {
+            activeTab = null;
+            DOM.tabBtns.forEach(b => b.classList.remove('active'));
+            DOM.panels.forEach(p => p.classList.remove('open'));
+        }
+
+        DOM.workspace.addEventListener('click', (e) => {
+            if(!isLocked) closeAllPanels();
+        });
+
+        DOM.targetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                DOM.targetBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentTarget = btn.dataset.target;
+                
+                DOM.imgLayer.classList.remove('target-active-glow');
+                DOM.gridLayer.classList.remove('target-active-glow');
+                if (currentTarget === 'image' || currentTarget === 'both') DOM.imgLayer.classList.add('target-active-glow');
+                if (currentTarget === 'grid' || currentTarget === 'both') DOM.gridLayer.classList.add('target-active-glow');
+            });
+        });
+
+        DOM.paperBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                displaySettings.paper = btn.dataset.paper;
+                app.saveSettings();
+                app.updateUIStates();
+                app.renderGrid();
+            });
+        });
+
+        document.getElementById('sl-opacity').addEventListener('input', (e) => {
+            displaySettings.opacity = e.target.value;
+            document.getElementById('val-opacity').textContent = e.target.value + '%';
+            app.applyDisplaySettings();
+        });
+        document.getElementById('sl-contrast').addEventListener('input', (e) => {
+            displaySettings.contrast = e.target.value;
+            document.getElementById('val-contrast').textContent = e.target.value + '%';
+            app.applyDisplaySettings();
+        });
+        document.getElementById('sl-thresh').addEventListener('input', (e) => {
+            displaySettings.thresh = e.target.value;
+            document.getElementById('val-thresh').textContent = e.target.value + '%';
+            app.applyDisplaySettings();
+        });
+
+        document.getElementById('btn-bw').addEventListener('click', () => {
+            displaySettings.bw = !displaySettings.bw;
+            app.updateUIStates(); app.applyDisplaySettings();
+        });
+        document.getElementById('btn-invert').addEventListener('click', () => {
+            displaySettings.invert = !displaySettings.invert;
+            app.updateUIStates(); app.applyDisplaySettings();
+        });
+        document.getElementById('btn-edge').addEventListener('click', () => {
+            displaySettings.edge = !displaySettings.edge;
+            app.updateUIStates(); app.applyDisplaySettings();
+        });
+
+        function toggleUI() {
+            if(isLocked) return;
+            document.body.classList.toggle('ui-hidden');
+            closeAllPanels();
+        }
+        DOM.btnEye.addEventListener('click', toggleUI);
+
+        let lastTap = 0;
+        DOM.workspace.addEventListener('touchend', (e) => {
+            if(e.touches.length === 0 && e.changedTouches.length === 1) {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                if (tapLength < 300 && tapLength > 0) {
+                    toggleUI();
+                    e.preventDefault();
+                }
+                lastTap = currentTime;
+            }
+        });
+
+        function doVibrate() {
+            if ('vibrate' in navigator) navigator.vibrate(50);
+        }
+
+        DOM.btnLock.addEventListener('click', () => {
+            isLocked = true;
+            document.body.classList.add('locked');
+            closeAllPanels();
+            doVibrate();
+        });
+        DOM.btnUnlock.addEventListener('click', () => {
+            isLocked = false;
+            document.body.classList.remove('locked');
+            doVibrate();
+        });
+
+        function updateElementTransform(tState) {
+            tState.el.style.transform = `
+                translate(calc(-50% + ${tState.x}px), calc(-50% + ${tState.y}px))
+                scale(${tState.scale})
+                rotate(${tState.rotation}deg)
+                scaleX(${tState.flipH})
+                scaleY(${tState.flipV})
+            `;
+        }
+
+        function getActiveTransformStates() {
+            if (currentTarget === 'image') return [transforms.image];
+            if (currentTarget === 'grid') return [transforms.grid];
+            if (currentTarget === 'both') return [transforms.image, transforms.grid];
+            return [];
+        }
+        
+        let isTouching = false;
+        let ticking = false; 
+        
+        let initialTouches = [];
+        let initialTransformSnapshot = []; 
+        let initialMidpoint = { x: 0, y: 0 };
+        let initialDist = 0;
+        let initialAngle = 0;
+
+        function getMidpoint(p1, p2) {
+            return { x: (p1.clientX + p2.clientX) / 2, y: (p1.clientY + p2.clientY) / 2 };
+        }
+        function getDistance(p1, p2) {
+            return Math.hypot(p2.clientX - p1.clientX, p2.clientY - p1.clientY);
+        }
+        function getAngle(p1, p2) {
+            return Math.atan2(p2.clientY - p1.clientY, p2.clientX - p1.clientX) * 180 / Math.PI;
+        }
+
+        DOM.workspace.addEventListener('touchstart', (e) => {
+            if(isLocked) return;
+            if (e.target.closest('.interactive-ui')) return; 
+            
+            e.preventDefault(); 
+            
+            const touches = e.touches;
+            if (touches.length === 1 || touches.length === 2) {
+                isTouching = true;
+                
+                const activeStates = getActiveTransformStates();
+                initialTransformSnapshot = activeStates.map(st => ({...st})); 
+                
+                if (touches.length === 1) {
+                    initialMidpoint = { x: touches[0].clientX, y: touches[0].clientY };
+                } else if (touches.length === 2) {
+                    initialMidpoint = getMidpoint(touches[0], touches[1]);
+                    initialDist = getDistance(touches[0], touches[1]);
+                    initialAngle = getAngle(touches[0], touches[1]);
+                }
+            }
+        }, { passive: false });
+
+        DOM.workspace.addEventListener('touchmove', (e) => {
+            if(!isTouching || isLocked) return;
+            if (e.target.closest('.interactive-ui')) return;
+            e.preventDefault();
+
+            if (!ticking) {
+                const currentTouches = [];
+                for(let i=0; i<e.touches.length; i++) {
+                    currentTouches.push({clientX: e.touches[i].clientX, clientY: e.touches[i].clientY});
+                }
+                
+                requestAnimationFrame(() => {
+                    handleTouchMoveLogic(currentTouches);
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }, { passive: false });
+
+        DOM.workspace.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0) {
+                isTouching = false;
+            } else if (e.touches.length === 1 && isTouching) {
+                const activeStates = getActiveTransformStates();
+                initialTransformSnapshot = activeStates.map(st => ({...st}));
+                initialMidpoint = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+        }, { passive: false });
+        
+        DOM.workspace.addEventListener('touchcancel', () => { isTouching = false; });
+
+        function handleTouchMoveLogic(touches) {
+            let currentMidpoint, scaleMultiplier = 1, rotationDelta = 0;
+
+            if (touches.length === 1) {
+                currentMidpoint = { x: touches[0].clientX, y: touches[0].clientY };
+            } else if (touches.length >= 2) {
+                currentMidpoint = getMidpoint(touches[0], touches[1]);
+                let currentDist = getDistance(touches[0], touches[1]);
+                let currentAngle = getAngle(touches[0], touches[1]);
+
+                if (initialDist > 0) scaleMultiplier = currentDist / initialDist;
+                rotationDelta = currentAngle - initialAngle;
+            } else return;
+
+            const deltaX = currentMidpoint.x - initialMidpoint.x;
+            const deltaY = currentMidpoint.y - initialMidpoint.y;
+
+            const activeStates = getActiveTransformStates();
+
+            activeStates.forEach((state, index) => {
+                const initSt = initialTransformSnapshot[index];
+                
+                const screenCX = window.innerWidth / 2;
+                const screenCY = window.innerHeight / 2;
+                const objCX = screenCX + initSt.x;
+                const objCY = screenCY + initSt.y;
+
+                const vx = initialMidpoint.x - objCX;
+                const vy = initialMidpoint.y - objCY;
+
+                let newScale = initSt.scale * scaleMultiplier;
+                newScale = Math.max(0.05, Math.min(newScale, 25));
+                const actualScaleMult = newScale / initSt.scale;
+
+                let newRotation = initSt.rotation + rotationDelta;
+
+                const rad = rotationDelta * Math.PI / 180;
+                const cos = Math.cos(rad);
+                const sin = Math.sin(rad);
+                
+                const vNewX = (vx * cos - vy * sin) * actualScaleMult;
+                const vNewY = (vx * sin + vy * cos) * actualScaleMult;
+
+                const diffX = vx - vNewX;
+                const diffY = vy - vNewY;
+
+                state.x = initSt.x + deltaX + diffX;
+                state.y = initSt.y + deltaY + diffY;
+                state.scale = newScale;
+                state.rotation = newRotation;
+
+                updateElementTransform(state);
+            });
+        }
+
+        updateElementTransform(transforms.image);
+        updateElementTransform(transforms.grid);
+
+    </script>
+</body>
+</html>

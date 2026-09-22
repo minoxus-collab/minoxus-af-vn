@@ -24,6 +24,7 @@
     "astro": "^6.3.8",
     "browser-image-compression": "^2.0.2",
     "dompurify": "^3.4.7",
+    "fuse.js": "^7.5.0",
     "isomorphic-dompurify": "^3.14.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
